@@ -1,4 +1,5 @@
-﻿using BepInEx;
+using BepInEx;
+using HarmonyLib;
 using Jotunn.Entities;
 using Jotunn.Managers;
 
@@ -17,13 +18,24 @@ namespace RobleysQuestingFramework
         // https://valheim-modding.github.io/Jotunn/tutorials/localization.html
         public static CustomLocalization Localization = LocalizationManager.Instance.GetLocalization();
 
+        private Harmony harmony;
+        private void Update() => QuestManager.Tick();
+        private void OnDestroy()
+        {
+            QuestManager.Unload();
+            harmony?.UnpatchSelf();
+        }
+
         private void Awake()
         {
             // Jotunn comes with its own Logger class to provide a consistent Log style for all mods using it
             Jotunn.Logger.LogInfo("ModStub has landed");
-            
+
             // To learn more about Jotunn's features, go to
             // https://valheim-modding.github.io/Jotunn/tutorials/overview.html
+
+            harmony = new Harmony(PluginGUID);
+            harmony.PatchAll(typeof(QuestManager).Assembly);
         }
     }
 }

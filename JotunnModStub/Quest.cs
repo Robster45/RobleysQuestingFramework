@@ -1,14 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jotunn;
 
 namespace RobleysQuestingFramework
 {
     [Flags]
-    enum QuestStage
+    public enum QuestStage
     {
         Hidden = 0,
         Discovered = 1 << 0,
@@ -19,105 +15,75 @@ namespace RobleysQuestingFramework
     }
 
     [Serializable]
-    internal abstract class Quest
+    public abstract class Quest
     {
         public string Name = "Unnamed quest";
+
         public ZDOID QuestGiverId = ZDOID.None;
 
-        public QuestStage Stage { get; private set; } = QuestStage.Hidden;
-
-        internal void RestoreStage(QuestStage stage)
-        {
-            if (subscriptionsEnabled)
-                throw new InvalidOperationException("Restore state before subscribing.");
-            Stage = stage;
-        }
-
-        private sealed class SubscriptionRule
-        {
-            public Func<QuestStage, bool> ShouldBeActive;
-            public Action Subscribe;
-            public Action Unsubscribe;
-            public bool IsActive;
-        }
+        [NonSerialized]
+        List<SubscriptionRule> _subscriptions;
 
         [NonSerialized]
-        private List<SubscriptionRule> subscriptions;
-
-        [NonSerialized]
-        private bool subscriptionsEnabled;
-
-        // Called once per runtime instance, including after deserialization.
-        protected abstract void ConfigureSubscriptions();
-
-        // Callbacks should only attach/detach listeners, not change quest state.
-        protected void RegisterSubscription(Func<QuestStage, bool> condition, Action subscribe, Action unsubscribe)
-        {
-            if (condition == null) 
-                throw new ArgumentNullException(nameof(condition));
-            
-            if (subscribe == null) 
-                throw new ArgumentNullException(nameof(subscribe));
-            
-            if (unsubscribe == null) 
-                throw new ArgumentNullException(nameof(unsubscribe));
-
-            subscriptions.Add(new SubscriptionRule
-            {
-                ShouldBeActive = condition,
-                Subscribe = subscribe,
-                Unsubscribe = unsubscribe
-            });
-        }
-
-        protected static bool Has(QuestStage stage, QuestStage flags)
-            => (stage & flags) == flags;
-
-        protected static bool IsFinishedStage(QuestStage stage)
-            => (stage & (QuestStage.Completed | QuestStage.Cancelled)) != 0;
-
-        private void RefreshSubscriptions()
-        {
-            if (subscriptions == null)
-                return;
-
-            // Detach obsolete listeners before attaching new ones.
-            foreach (var rule in subscriptions)
-            {
-                if (rule.IsActive &&
-                    (!subscriptionsEnabled || !rule.ShouldBeActive(Stage)))
-                {
-                    rule.Unsubscribe();
-                    rule.IsActive = false;
-                }
-            }
-
-            if (!subscriptionsEnabled)
-                return;
-
-            foreach (var rule in subscriptions)
-            {
-                if (!rule.IsActive && rule.ShouldBeActive(Stage))
-                {
-                    rule.Subscribe();
-                    rule.IsActive = true;
-                }
-            }
-        }
+        bool _subscriptionsEnabled;
 
         [field: NonSerialized]
         public event Action<QuestStage, QuestStage> StageChanged;
 
-        protected void SetStage(QuestStage next)
-        {
-            if (Stage == next)
-                return;
+        [field: NonSerialized]
+        public event Action Completed;
 
-            Jotunn.Logger.LogInfo($"{Name} set to next stage: {next}");
-            var previous = Stage;
-            Stage = next;
-            RefreshSubscriptions();
-            StageChanged?.Invoke(previous, next);
+        // Stable character ID, also stored in QuestManager's save record.
+        public long PlayerID { get; }
+
+        public QuestStage Stage { get; private set; } = QuestStage.Hidden;
+
+        bool IsFinished =>
+            (Stage & (QuestStage.Completed | QuestStage.Cancelled)) != 0;
+
+        protected Quest(long playerID)
+        {
+            if (playerID == 0)
+                throw new ArgumentException("A quest needs a valid character ID.", nameof(playerID));
+
+            PlayerID = playerID;
+        }
+
+        /// <summary>
+        /// Checks current progress and calls SetCriteriaMet to update the quest's criteria.
+        /// Quest event handlers call this method when relevant progress changes.
+        /// </summary>
+        protected abstract void CheckCompletionCriteria();
+
+        /// <summary>
+        /// Applies this quest's rewards or other completion effects after its stage becomes Completed.
+        /// Called once for a successful completion transition, never when loading saved state.
+        /// </summary>
+        protected abstract void ActivateQuestCompletionEffects();
+
+        /// <summary>
+        /// Registers the quest's event listeners and the stages in which they should be active.
+        /// Called on the first Subscribe call for each runtime instance, including after deserialization.
+        /// </summary>
+        protected abstract void ConfigureSubscriptions();
+
+        /// <summary>
+        /// Returns the quest-specific progress value to store in the world save.
+        /// Override this for quests that track progress; the default returns zero.
+        /// </summary>
+        internal virtual int SaveProgress() => 0;
+
+        /// <summary>
+        /// Restores quest-specific progress from the world save before listeners are attached.
+        /// Override this to validate and apply the saved value; the default does nothing.
+        /// </summary>
+        internal virtual void RestoreProgress(int progress) { }
+
+        internal void RestoreStage(QuestStage stage)
+        {
+            if (_subscriptionsEnabled)
+                throw new InvalidOperationException("Restore state before subscribing.");
+            Stage = stage;
         }
 
         public void Discover()
@@ -135,16 +101,6 @@ namespace RobleysQuestingFramework
             SetStage(Stage | QuestStage.Started);
         }
 
-        protected void SetCriteriaMet(bool met)
-        {
-            if ((Stage & QuestStage.Started) == 0 || IsFinished)
-                return;
-
-            SetStage(met
-                ? Stage | QuestStage.CriteriaMet
-                : Stage & ~QuestStage.CriteriaMet);
-        }
-
         public void CompleteQuest()
         {
             var required = QuestStage.Started | QuestStage.CriteriaMet;
@@ -154,6 +110,8 @@ namespace RobleysQuestingFramework
 
             Jotunn.Logger.LogInfo($"Completing Quest: {Name}");
             SetStage(Stage | QuestStage.Completed);
+            ActivateQuestCompletionEffects();
+            Completed?.Invoke();
         }
 
         public void CancelQuest()
@@ -169,27 +127,111 @@ namespace RobleysQuestingFramework
                 | QuestStage.Cancelled);
         }
 
-        private bool IsFinished =>
-            (Stage & (QuestStage.Completed | QuestStage.Cancelled)) != 0;
-
         // Attach/detach this quest's inventory, interaction, etc. listeners.
         public void Subscribe()
         {
-            if (subscriptions == null)
+            if (_subscriptions == null)
             {
-                subscriptions = new List<SubscriptionRule>();
+                _subscriptions = new List<SubscriptionRule>();
                 ConfigureSubscriptions();
             }
 
-            subscriptionsEnabled = true;
+            _subscriptionsEnabled = true;
             RefreshSubscriptions();
         }
 
         public void Unsubscribe()
         {
-            subscriptionsEnabled = false;
+            _subscriptionsEnabled = false;
             RefreshSubscriptions();
+        }
+
+        // Callbacks should only attach/detach listeners, not change quest state.
+        protected void RegisterSubscription(Func<QuestStage, bool> condition, Action subscribe, Action unsubscribe)
+        {
+            if (condition == null)
+                throw new ArgumentNullException(nameof(condition));
+
+            if (subscribe == null)
+                throw new ArgumentNullException(nameof(subscribe));
+
+            if (unsubscribe == null)
+                throw new ArgumentNullException(nameof(unsubscribe));
+
+            _subscriptions.Add(new SubscriptionRule
+            {
+                ShouldBeActive = condition,
+                Subscribe = subscribe,
+                Unsubscribe = unsubscribe
+            });
+        }
+
+        protected void SetCriteriaMet(bool met)
+        {
+            if ((Stage & QuestStage.Started) == 0 || IsFinished)
+                return;
+
+            SetStage(met
+                ? Stage | QuestStage.CriteriaMet
+                : Stage & ~QuestStage.CriteriaMet);
+
+            if (met && QuestGiverId == ZDOID.None)
+                CompleteQuest();
+        }
+
+        protected void SetStage(QuestStage next)
+        {
+            if (Stage == next)
+                return;
+
+            Jotunn.Logger.LogInfo($"{Name} set to next stage: {next}");
+            var previous = Stage;
+            Stage = next;
+            RefreshSubscriptions();
+            StageChanged?.Invoke(previous, next);
+        }
+
+        protected static bool Has(QuestStage stage, QuestStage flags)
+            => (stage & flags) == flags;
+
+        protected static bool IsFinishedStage(QuestStage stage)
+            => (stage & (QuestStage.Completed | QuestStage.Cancelled)) != 0;
+
+        void RefreshSubscriptions()
+        {
+            if (_subscriptions == null)
+                return;
+
+            // Detach obsolete listeners before attaching new ones.
+            foreach (var rule in _subscriptions)
+            {
+                if (rule.IsActive &&
+                    (!_subscriptionsEnabled || !rule.ShouldBeActive(Stage)))
+                {
+                    rule.Unsubscribe();
+                    rule.IsActive = false;
+                }
+            }
+
+            if (!_subscriptionsEnabled)
+                return;
+
+            foreach (var rule in _subscriptions)
+            {
+                if (!rule.IsActive && rule.ShouldBeActive(Stage))
+                {
+                    rule.Subscribe();
+                    rule.IsActive = true;
+                }
+            }
+        }
+
+        sealed class SubscriptionRule
+        {
+            public Func<QuestStage, bool> ShouldBeActive;
+            public Action Subscribe;
+            public Action Unsubscribe;
+            public bool IsActive;
         }
     }
 }
-

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using HarmonyLib;
@@ -6,145 +7,162 @@ using UnityEngine;
 
 namespace RobleysQuestingFramework
 {
-    // Initial quests track local character progress, including on remote clients.
-    internal class QuestManager
+    // Owns server-side state only. Quest definitions and test setup live elsewhere.
+    public class QuestManager
     {
-        [Serializable]
-        public class SaveData
-        {
-            public int Version = 1;
-            public string WorldID;
-            public string PlayerID;
-            public int WoodQuestStage;
-        }
+        static readonly Dictionary<string, Func<long, QuestInventory, Quest>> Factories =
+            new Dictionary<string, Func<long, QuestInventory, Quest>>();
 
-        public static readonly string DataLoadPath = Path.Combine(
+        static readonly string DataLoadPath = Path.Combine(
             BepInEx.Paths.ConfigPath, "RobleysQuestingFramework", "worlds");
-        public static QuestManager WorldInstance { get; private set; }
-        private static bool initializationFailed;
-        private readonly Player player;
-        private readonly Inventory inventory;
-        private readonly TestQuest_10Wood quest;
-        private readonly string worldID;
-        private readonly string playerID;
-        private readonly string savePath;
-        private bool dirty;
-        private float nextSave;
 
-        private QuestManager(Player player, string worldID)
+        readonly Dictionary<QuestRecord, Quest> _active = new Dictionary<QuestRecord, Quest>();
+
+        readonly SaveData _data;
+
+        readonly string _savePath;
+
+        internal static QuestManager WorldInstance { get; private set; }
+
+        QuestManager(string worldID)
         {
-            this.player = player;
-            this.worldID = worldID;
-            playerID = player.GetPlayerID().ToString(CultureInfo.InvariantCulture);
-            inventory = player.GetInventory();
-            savePath = Path.Combine(DataLoadPath, worldID, playerID + ".json");
-            quest = new TestQuest_10Wood(inventory);
-            if (File.Exists(savePath))
+            _savePath = Path.Combine(DataLoadPath, worldID + ".json");
+            _data = File.Exists(_savePath)
+                ? JsonUtility.FromJson<SaveData>(File.ReadAllText(_savePath))
+                : new SaveData { WorldID = worldID };
+            if (_data == null || _data.Version != 1 || _data.WorldID != worldID || _data.Quests == null)
+                throw new InvalidDataException("Invalid or unsupported quest save: " + _savePath);
+            var keys = new HashSet<string>();
+            foreach (var record in _data.Quests)
             {
-                var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(savePath));
-                if (data == null || data.Version != 1 || data.WorldID != worldID ||
-                    data.PlayerID != playerID || data.WoodQuestStage < 0 ||
-                    (data.WoodQuestStage & ~31) != 0)
-                    throw new InvalidDataException("Invalid or unsupported quest save: " + savePath);
-                quest.RestoreStage((QuestStage)data.WoodQuestStage);
+                if (record == null || !long.TryParse(record.PlayerID, out long parsedPlayerID) || parsedPlayerID == 0 ||
+                    string.IsNullOrEmpty(record.QuestID) || record.Stage < 0 || (record.Stage & ~31) != 0 ||
+                    !keys.Add(record.PlayerID + ":" + record.QuestID))
+                    throw new InvalidDataException("Invalid quest record in " + _savePath);
             }
-            else
+            // Validate the whole file before attaching any quest listeners.
+            foreach (var record in _data.Quests)
             {
-                quest.Discover();
-                quest.StartQuest();
+                // Retain records for unavailable quest definitions without discarding them.
+                if (Factories.ContainsKey(record.QuestID))
+                    Activate(record);
             }
-            quest.StageChanged += OnStageChanged;
-            quest.Subscribe();
-            quest.CheckHas10Wood();
-            dirty = true;
-            Jotunn.Logger.LogInfo($"{quest.Name}: {quest.Stage}. Save: {savePath}");
+            Jotunn.Logger.LogInfo("Server quest data loaded: " + _savePath);
         }
 
-        private void OnStageChanged(QuestStage previous, QuestStage current)
-        {
-            dirty = true;
-            Jotunn.Logger.LogInfo($"{quest.Name}: {previous} -> {current}");
-        }
+        internal static void RegisterQuest(string id, Func<long, QuestInventory, Quest> factory) => Factories[id] = factory;
 
-        internal static void Tick()
+        internal Quest GetOrAddQuest(long playerID, string questID, out bool created)
         {
-            if (!ZNet.instance || !Player.m_localPlayer)
+            string id = playerID.ToString(CultureInfo.InvariantCulture);
+            var record = _data.Quests.Find(q => q.PlayerID == id && q.QuestID == questID);
+            created = record == null;
+            if (created)
             {
-                if (WorldInstance != null) Unload();
-                return;
+                if (!Factories.ContainsKey(questID))
+                    throw new ArgumentException("Unknown quest: " + questID);
+                record = new QuestRecord { PlayerID = id, QuestID = questID };
+                _data.Quests.Add(record);
             }
-            if (ZNet.instance.GetWorld() == null) return;
-            var localPlayer = Player.m_localPlayer;
-            if (localPlayer.GetPlayerID() == 0 || localPlayer.GetInventory() == null) return;
-            string id = ZNet.instance.GetWorldUID().ToString(CultureInfo.InvariantCulture);
-            if (WorldInstance != null && (WorldInstance.player != localPlayer ||
-                WorldInstance.inventory != localPlayer.GetInventory() || WorldInstance.worldID != id))
-                Unload();
-
-            if (WorldInstance == null && !initializationFailed)
-            {
-                try { WorldInstance = new QuestManager(localPlayer, id); }
-                catch (Exception ex)
-                {
-                    initializationFailed = true;
-                    Jotunn.Logger.LogError($"Quest load failed; existing save left untouched: {ex}");
-                }
-            }
-            if (WorldInstance != null && WorldInstance.dirty && Time.unscaledTime >= WorldInstance.nextSave)
-                WorldInstance.Save();
-        }
-
-        private void Save()
-        {
-            nextSave = Time.unscaledTime + 2f;
-            if (!dirty) return;
-            try
-            {
-                var data = new SaveData
-                {
-                    WorldID = worldID, PlayerID = playerID, WoodQuestStage = (int)quest.Stage
-                };
-                Directory.CreateDirectory(Path.GetDirectoryName(savePath));
-                string temporary = savePath + ".tmp";
-                File.WriteAllText(temporary, JsonUtility.ToJson(data, true));
-                if (File.Exists(savePath))
-                    File.Replace(temporary, savePath, savePath + ".bak");
-                else
-                    File.Move(temporary, savePath);
-                dirty = false;
-            }
-            catch (Exception ex)
-            {
-                Jotunn.Logger.LogError($"Quest save failed: {ex}");
-            }
+            return _active.TryGetValue(record, out var quest) ? quest : Activate(record);
         }
 
         internal static void Unload()
         {
             var manager = WorldInstance;
-            WorldInstance = null;
-            initializationFailed = false;
             if (manager == null) return;
             try { manager.Save(); }
             finally
             {
-                manager.quest.Unsubscribe();
-                manager.quest.StageChanged -= manager.OnStageChanged;
+                foreach (var quest in manager._active.Values) quest.Unsubscribe();
+                WorldInstance = null;
+            }
+        }
+
+        Quest Activate(QuestRecord record)
+        {
+            long playerID = long.Parse(record.PlayerID, CultureInfo.InvariantCulture);
+            var quest = Factories[record.QuestID](playerID, InventoryObservationService.ForPlayer(playerID));
+            quest.RestoreProgress(record.Progress);
+            quest.RestoreStage((QuestStage)record.Stage);
+            _active.Add(record, quest);
+            quest.StageChanged += (previous, current) => record.Stage = (int)current;
+            quest.Subscribe();
+            return quest;
+        }
+
+        void Save()
+        {
+            if (!ZNet.instance || !ZNet.instance.IsServer()) return;
+            try
+            {
+                Directory.CreateDirectory(DataLoadPath);
+                foreach (var entry in _active) entry.Key.Progress = entry.Value.SaveProgress();
+                string temporary = _savePath + ".tmp";
+                File.WriteAllText(temporary, JsonUtility.ToJson(_data, true));
+                if (File.Exists(_savePath))
+                    File.Replace(temporary, _savePath, _savePath + ".bak");
+                else
+                    File.Move(temporary, _savePath);
+                Jotunn.Logger.LogInfo("Server quest data saved: " + _savePath);
+            }
+            catch (Exception ex) { Jotunn.Logger.LogError("Quest save failed: " + ex); }
+        }
+
+        [Serializable]
+        class QuestRecord
+        {
+            public string PlayerID;
+            public string QuestID;
+            public int Stage;
+            public int Progress;
+        }
+
+        [Serializable]
+        class SaveData
+        {
+            public int Version = 1;
+            public string WorldID;
+            public List<QuestRecord> Quests = new List<QuestRecord>();
+        }
+
+        [HarmonyPatch(typeof(ZNet), "Start")]
+        static class WorldStartedPatch
+        {
+            [HarmonyPostfix]
+            static void Postfix(ZNet __instance)
+            {
+                if (!__instance.IsServer()) return;
+                try
+                {
+                    WorldInstance = new QuestManager(__instance.GetWorldUID().ToString(CultureInfo.InvariantCulture));
+                }
+                catch (Exception ex)
+                {
+                    WorldInstance = null;
+                    InventoryObservationService.Reset();
+                    Jotunn.Logger.LogError("Quest load failed; existing save left untouched: " + ex);
+                }
             }
         }
 
         [HarmonyPatch(typeof(ZNet), "Shutdown")]
-        private static class WorldClosingPatch
+        static class WorldClosingPatch
         {
             [HarmonyPrefix]
-            private static void Prefix() => Unload();
+            static void Prefix()
+            {
+                Unload();
+                InventoryObservationService.Reset();
+                KillObservationService.Reset();
+            }
         }
 
         [HarmonyPatch(typeof(ZNet), "Save")]
-        private static class WorldSavingPatch
+        static class WorldSavingPatch
         {
             [HarmonyPrefix]
-            private static void Prefix() => WorldInstance?.Save();
+            static void Prefix() => WorldInstance?.Save();
         }
     }
 }

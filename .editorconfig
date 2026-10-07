@@ -1,0 +1,48 @@
+root = true
+
+[*.cs]
+# Omit default accessibility (private for class members, internal for top-level types).
+# Restrictive accessors such as private set remain necessary.
+dotnet_style_require_accessibility_modifiers = omit_if_default:warning
+# Static fields and constants take precedence over instance field rules.
+dotnet_naming_rule.constants_pascal.symbols = constants
+dotnet_naming_rule.constants_pascal.style = pascal_case
+dotnet_naming_rule.constants_pascal.severity = warning
+dotnet_naming_symbols.constants.applicable_kinds = field, local
+dotnet_naming_symbols.constants.required_modifiers = const
+
+dotnet_naming_rule.static_fields_pascal.symbols = static_fields
+dotnet_naming_rule.static_fields_pascal.style = pascal_case
+dotnet_naming_rule.static_fields_pascal.severity = warning
+dotnet_naming_symbols.static_fields.applicable_kinds = field
+dotnet_naming_symbols.static_fields.required_modifiers = static
+
+dotnet_naming_rule.private_protected_fields_camel.symbols = private_protected_fields
+dotnet_naming_rule.private_protected_fields_camel.style = underscore_camel_case
+dotnet_naming_rule.private_protected_fields_camel.severity = warning
+dotnet_naming_symbols.private_protected_fields.applicable_kinds = field
+dotnet_naming_symbols.private_protected_fields.applicable_accessibilities = private, protected, protected_internal, private_protected
+
+dotnet_naming_rule.exposed_fields_pascal.symbols = exposed_fields
+dotnet_naming_rule.exposed_fields_pascal.style = pascal_case
+dotnet_naming_rule.exposed_fields_pascal.severity = warning
+dotnet_naming_symbols.exposed_fields.applicable_kinds = field
+dotnet_naming_symbols.exposed_fields.applicable_accessibilities = public, internal
+
+dotnet_naming_rule.members_pascal.symbols = members
+dotnet_naming_rule.members_pascal.style = pascal_case
+dotnet_naming_rule.members_pascal.severity = warning
+dotnet_naming_symbols.members.applicable_kinds = method, property, event, named_type, namespace
+
+dotnet_naming_rule.locals_camel.symbols = locals
+dotnet_naming_rule.locals_camel.style = camel_case
+dotnet_naming_rule.locals_camel.severity = warning
+dotnet_naming_symbols.locals.applicable_kinds = local
+
+# Parameters use camelCase by convention. Harmony injection parameters retain
+# their required names (__instance, ___m_nview, ___m_lastHit), so no blanket
+# parameter diagnostic is enabled.
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+dotnet_naming_style.camel_case.capitalization = camel_case
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+dotnet_naming_style.underscore_camel_case.required_prefix = _

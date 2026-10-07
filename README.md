@@ -1,7 +1,7 @@
 # JötunnModStub
 
 A Valheim mod stub project using [Jötunn](https://github.com/Valheim-Modding/Jotunn) including build tools and a basic Unity project stub.
-There is no actual plugin content included, just a minimum plugin class. 
+This project now includes a server-owned quest framework. Start with [Writing quests](QUEST-INVENTORY.md) for the base class contract, example quests, inventory design, and current limitations.
 
 #  Setup Guide
 

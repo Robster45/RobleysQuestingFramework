@@ -1,65 +1,45 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Jotunn.Managers;
-
 namespace RobleysQuestingFramework
 {
-    internal class TestQuest_10Wood : Quest
+    public class TestQuest_10Wood : ResourceCollectionQuest
     {
-        protected override void ConfigureSubscriptions()
+        const int RequiredWood = 10;
+        internal TestQuest_10Wood(QuestInventory inventory, long playerID)
+            : base(inventory, playerID, new ResourceCollectionCriteria("Wood", RequiredWood))
         {
-            RegisterSubscription(
-                s => Has(s, QuestStage.Started) && !IsFinishedStage(s),
-                SubscribeInventoryChanges,
-                UnsubscribeInventoryChanges);
-        }
-
-        private readonly Inventory inventory;
-
-        public TestQuest_10Wood(Inventory inventory)
-        {
-            this.inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
             Name = "Gather 10 wood";
         }
 
-        private void SubscribeInventoryChanges()
+        protected override void ActivateQuestCompletionEffects()
         {
-            inventory.m_onChanged += CheckHas10Wood;
-        }
+            Player player = Player.GetPlayer(PlayerID);
+            Jotunn.Logger.LogInfo($"Wood payout: found={player != null}, local={player && player == Player.m_localPlayer}");
 
-        private void UnsubscribeInventoryChanges()
-        {
-            inventory.m_onChanged -= CheckHas10Wood;
-        }
-
-        internal void CheckHas10Wood()
-        {
-            SetCriteriaMet(inventory.CountItems("$item_wood") >= 10);
-            Jotunn.Logger.LogInfo($"Met Criteria? {Stage.HasFlag(QuestStage.CriteriaMet)}");
+            // This example requires the player object to be loaded on the server.
+            // Remote-client reward delivery still needs a separate implementation.
+            if (player)
+            {
+                Jotunn.Logger.LogInfo($"QUEST COMPLETED: Removing 10 wood, adding 100 xp to woodcutting skill");
+                player.RaiseSkill(Skills.SkillType.WoodCutting, 100);
+                player.GetInventory().RemoveItem("$item_wood", RequiredWood);
+            }
         }
     }
-    internal class TestQuest_KillNecks : Quest
+
+    public class TestQuest_KillNecks : KillQuest
     {
-        protected override void ConfigureSubscriptions()
+        internal TestQuest_KillNecks(long playerID)
+            : base(playerID, new KillCriteria("Neck", 5))
         {
-            RegisterSubscription(
-                s => Has(s, QuestStage.Started) && !IsFinishedStage(s),
-                SubscribeKillEvents,
-                UnsubscribeKillEvents);
+            Name = "Kill 5 necks";
         }
 
-        private void SubscribeKillEvents()
+        protected override void ActivateQuestCompletionEffects()
         {
-            Jotunn.Logger.LogInfo("KillNecks Quest Loaded");
-        }
+            Jotunn.Logger.LogInfo($"QUEST COMPLETED: Triggering retaliatory raid");
+            Player player = Player.GetPlayer(PlayerID);
 
-        private void UnsubscribeKillEvents()
-        {
-            Jotunn.Logger.LogInfo("KillNecks Quest unloaded");
+            if (ZNet.instance && ZNet.instance.IsServer() && RandEventSystem.instance && player)
+                RandEventSystem.instance.SetRandomEventByName("army_eikthyr", player.transform.position);
         }
     }
 }
-

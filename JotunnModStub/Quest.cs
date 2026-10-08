@@ -77,9 +77,9 @@ namespace RobleysQuestingFramework
         /// Restores quest-specific progress from the world save before listeners are attached.
         /// Override this to validate and apply the saved value; the default does nothing.
         /// </summary>
-        internal virtual void RestoreProgress(int progress) { }
+        public virtual void RestoreProgress(int progress) { }
 
-        internal void RestoreStage(QuestStage stage)
+        public void RestoreStage(QuestStage stage)
         {
             if (_subscriptionsEnabled)
                 throw new InvalidOperationException("Restore state before subscribing.");

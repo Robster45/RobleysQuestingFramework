@@ -6,7 +6,7 @@ namespace RobleysQuestingFramework
     /// One required resource, identified by prefab name rather than its translated display name.
     /// A null quality accepts any quality; a value requires that exact quality.
     /// </summary>
-    public sealed class ResourceCollectionCriteria
+    public class ResourceCollectionCriteria
     {
         public string PrefabName { get; }
         public int Quantity { get; }

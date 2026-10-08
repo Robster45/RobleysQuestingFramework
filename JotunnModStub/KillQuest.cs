@@ -22,13 +22,13 @@ namespace RobleysQuestingFramework
         /// <summary>
         /// Returns the current kill count for the existing integer progress save field.
         /// </summary>
-        internal override int SaveProgress() => KillCount;
+        public override int SaveProgress() => KillCount;
 
         /// <summary>
         /// Restores the saved kill count, clamped to the configured requirement.
         /// Loading progress does not trigger completion effects.
         /// </summary>
-        internal override void RestoreProgress(int progress)
+        public override void RestoreProgress(int progress)
         {
             KillCount = Math.Max(0, Math.Min(Criteria.Quantity, progress));
         }

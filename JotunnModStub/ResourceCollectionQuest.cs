@@ -13,12 +13,12 @@ namespace RobleysQuestingFramework
 
         public IReadOnlyList<ResourceCollectionCriteria> Criteria { get; }
 
-        protected ResourceCollectionQuest(long playerID, params ResourceCollectionCriteria[] criteria)
+        public ResourceCollectionQuest(long playerID, params ResourceCollectionCriteria[] criteria)
             : this(InventoryObservationService.ForPlayer(playerID), playerID, criteria)
         {
         }
 
-        internal ResourceCollectionQuest(QuestInventory inventory, long playerID,
+        public ResourceCollectionQuest(QuestInventory inventory, long playerID,
             params ResourceCollectionCriteria[] criteria) : base(playerID)
         {
             if (inventory == null)

@@ -22,7 +22,7 @@ namespace RobleysQuestingFramework
 
         readonly string _savePath;
 
-        internal static QuestManager WorldInstance { get; private set; }
+        public static QuestManager WorldInstance { get; private set; }
 
         QuestManager(string worldID)
         {
@@ -50,9 +50,9 @@ namespace RobleysQuestingFramework
             Jotunn.Logger.LogInfo("Server quest data loaded: " + _savePath);
         }
 
-        internal static void RegisterQuest(string id, Func<long, QuestInventory, Quest> factory) => Factories[id] = factory;
+        public static void RegisterQuest(string id, Func<long, QuestInventory, Quest> factory) => Factories[id] = factory;
 
-        internal Quest GetOrAddQuest(long playerID, string questID, out bool created)
+        public Quest GetOrAddQuest(long playerID, string questID, out bool created)
         {
             string id = playerID.ToString(CultureInfo.InvariantCulture);
             var record = _data.Quests.Find(q => q.PlayerID == id && q.QuestID == questID);
@@ -67,7 +67,7 @@ namespace RobleysQuestingFramework
             return _active.TryGetValue(record, out var quest) ? quest : Activate(record);
         }
 
-        internal static void Unload()
+        public static void Unload()
         {
             var manager = WorldInstance;
             if (manager == null) return;

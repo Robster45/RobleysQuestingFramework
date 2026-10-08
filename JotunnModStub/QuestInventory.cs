@@ -4,14 +4,14 @@ using System.Collections.Generic;
 namespace RobleysQuestingFramework
 {
     // A server-side view of one character's latest client-reported inventory.
-    sealed class QuestInventory
+    public class QuestInventory
     {
         readonly Action<bool> _trackingChanged;
         Action _changed;
         bool _notificationPending;
         Dictionary<Tuple<string, int>, int> _counts = new Dictionary<Tuple<string, int>, int>();
 
-        internal event Action Changed
+        public event Action Changed
         {
             add
             {
@@ -34,15 +34,15 @@ namespace RobleysQuestingFramework
             }
         }
 
-        internal bool HasSnapshot { get; private set; }
-        internal bool IsObserved => _changed != null;
+        public bool HasSnapshot { get; private set; }
+        public bool IsObserved => _changed != null;
 
-        internal QuestInventory(Action<bool> trackingChanged)
+        public QuestInventory(Action<bool> trackingChanged)
         {
             _trackingChanged = trackingChanged ?? throw new ArgumentNullException(nameof(trackingChanged));
         }
 
-        internal long CountItems(string prefabID, int? quality = null)
+        public long CountItems(string prefabID, int? quality = null)
         {
             if (quality.HasValue)
                 return _counts.TryGetValue(Tuple.Create(prefabID, quality.Value), out int count) ? count : 0;
@@ -56,14 +56,14 @@ namespace RobleysQuestingFramework
             return total;
         }
 
-        internal void SetSnapshot(Dictionary<Tuple<string, int>, int> snapshot)
+        public void SetSnapshot(Dictionary<Tuple<string, int>, int> snapshot)
         {
             _counts = snapshot;
             HasSnapshot = true;
             _notificationPending = true;
         }
 
-        internal void Dispatch()
+        public void Dispatch()
         {
             if (!_notificationPending)
                 return;
@@ -71,7 +71,7 @@ namespace RobleysQuestingFramework
             _changed?.Invoke();
         }
 
-        internal void Invalidate()
+        public void Invalidate()
         {
             _counts.Clear();
             HasSnapshot = false;

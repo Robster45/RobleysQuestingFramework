@@ -3,10 +3,24 @@ namespace RobleysQuestingFramework
     public class TestQuest_10Wood : ResourceCollectionQuest
     {
         const int RequiredWood = 10;
-        internal TestQuest_10Wood(QuestInventory inventory, long playerID)
+        readonly QuestInventory _discoveryInventory;
+        public TestQuest_10Wood(QuestInventory inventory, long playerID)
             : base(inventory, playerID, new ResourceCollectionCriteria("Wood", RequiredWood))
         {
             Name = "Gather 10 wood";
+            _discoveryInventory = inventory;
+        }
+
+        protected override void SubscribeDiscoveryEvents()
+            => _discoveryInventory.Changed += DiscoverFromWood;
+
+        protected override void UnsubscribeDiscoveryEvents()
+            => _discoveryInventory.Changed -= DiscoverFromWood;
+
+        void DiscoverFromWood()
+        {
+            if (Stage == QuestStage.Hidden && _discoveryInventory.CountItems("AxeStone") > 0)
+                Discover();
         }
 
         protected override void ActivateQuestCompletionEffects()
@@ -27,10 +41,24 @@ namespace RobleysQuestingFramework
 
     public class TestQuest_KillNecks : KillQuest
     {
-        internal TestQuest_KillNecks(long playerID)
+        static readonly int NeckPrefabHash = "Neck".GetStableHashCode();
+
+        public TestQuest_KillNecks(long playerID)
             : base(playerID, new KillCriteria("Neck", 5))
         {
             Name = "Kill 5 necks";
+        }
+
+        protected override void SubscribeDiscoveryEvents()
+            => CreatureDiscoveryObservationService.PlayerDiscoveredCreature += DiscoverFromNeck;
+
+        protected override void UnsubscribeDiscoveryEvents()
+            => CreatureDiscoveryObservationService.PlayerDiscoveredCreature -= DiscoverFromNeck;
+
+        void DiscoverFromNeck(long playerID, int prefabHash)
+        {
+            if (Stage == QuestStage.Hidden && playerID == PlayerID && prefabHash == NeckPrefabHash)
+                Discover();
         }
 
         protected override void ActivateQuestCompletionEffects()

@@ -44,6 +44,7 @@ namespace RobleysQuestingFramework
             QuestManager.Unload();
             InventoryObservationService.Reset();
             KillObservationService.Reset();
+            CreatureDiscoveryObservationService.Reset();
             _harmony?.UnpatchSelf();
         }
     }

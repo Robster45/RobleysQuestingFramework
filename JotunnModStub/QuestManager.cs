@@ -155,6 +155,7 @@ namespace RobleysQuestingFramework
                 Unload();
                 InventoryObservationService.Reset();
                 KillObservationService.Reset();
+                CreatureDiscoveryObservationService.Reset();
             }
         }
 

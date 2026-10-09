@@ -68,10 +68,21 @@ namespace RobleysQuestingFramework
         protected abstract void ConfigureSubscriptions();
 
         /// <summary>
+        /// Attaches discovery watchers for this player while the quest is Hidden.
+        /// Only attach listeners here; discover the quest from an event callback.
+        /// </summary>
+        protected abstract void SubscribeDiscoveryEvents();
+
+        /// <summary>
+        /// Removes discovery watchers when leaving Hidden or unloading the quest.
+        /// </summary>
+        protected abstract void UnsubscribeDiscoveryEvents();
+
+        /// <summary>
         /// Returns the quest-specific progress value to store in the world save.
         /// Override this for quests that track progress; the default returns zero.
         /// </summary>
-        internal virtual int SaveProgress() => 0;
+        public virtual int SaveProgress() => 0;
 
         /// <summary>
         /// Restores quest-specific progress from the world save before listeners are attached.
@@ -90,6 +101,9 @@ namespace RobleysQuestingFramework
         {
             Jotunn.Logger.LogInfo($"Discovered Quest: {Name}");
             SetStage(Stage | QuestStage.Discovered);
+
+            if (QuestGiverId == ZDOID.None)
+                StartQuest();
         }
 
         public void StartQuest()
@@ -133,6 +147,10 @@ namespace RobleysQuestingFramework
             if (_subscriptions == null)
             {
                 _subscriptions = new List<SubscriptionRule>();
+                RegisterSubscription(
+                    stage => stage == QuestStage.Hidden,
+                    SubscribeDiscoveryEvents,
+                    UnsubscribeDiscoveryEvents);
                 ConfigureSubscriptions();
             }
 

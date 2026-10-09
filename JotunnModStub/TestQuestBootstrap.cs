@@ -1,32 +1,24 @@
 namespace RobleysQuestingFramework
 {
-    // Temporary quest registration and discovery; no inventory or networking logic.
+    // Temporary quest registration; individual quests own their discovery triggers.
     public static class TestQuestBootstrap
     {
-        const string QuestID = "test.gather_10_wood";
+        const string WoodQuestID = "test.gather_10_wood";
         const string KillQuestID = "test.kill_5_necks";
-        internal static void Register()
+
+        public static void Register()
         {
-            QuestManager.RegisterQuest(QuestID, (playerID, inventory) => new TestQuest_10Wood(inventory, playerID));
+            QuestManager.RegisterQuest(WoodQuestID, (playerID, inventory) => new TestQuest_10Wood(inventory, playerID));
             QuestManager.RegisterQuest(KillQuestID, (playerID, inventory) => new TestQuest_KillNecks(playerID));
-            InventoryObservationService.PlayerAvailable += StartTestQuest;
+            InventoryObservationService.PlayerAvailable += LoadTestQuests;
         }
 
-        internal static void Unregister() =>
-            InventoryObservationService.PlayerAvailable -= StartTestQuest;
+        public static void Unregister() => InventoryObservationService.PlayerAvailable -= LoadTestQuests;
 
-        static void StartTestQuest(long playerID)
+        static void LoadTestQuests(long playerID)
         {
-            StartQuest(playerID, QuestID);
-            StartQuest(playerID, KillQuestID);
-        }
-
-        static void StartQuest(long playerID, string questID)
-        {
-            var quest = QuestManager.WorldInstance.GetOrAddQuest(playerID, questID, out bool created);
-            if (!created) return;
-            quest.Discover();
-            quest.StartQuest();
+            QuestManager.WorldInstance.GetOrAddQuest(playerID, WoodQuestID, out _);
+            QuestManager.WorldInstance.GetOrAddQuest(playerID, KillQuestID, out _);
         }
     }
 }

@@ -1,6 +1,11 @@
 root = true
 
 [*.cs]
+indent_style = space
+indent_size = 4
+# Put embedded statements on their own indented line, including brace-free if bodies.
+csharp_style_allow_embedded_statements_on_same_line_experimental = false:warning
+csharp_preserve_single_line_statements = false
 # Omit default accessibility (private for class members, internal for top-level types).
 # Restrictive accessors such as private set remain necessary.
 dotnet_style_require_accessibility_modifiers = omit_if_default:warning

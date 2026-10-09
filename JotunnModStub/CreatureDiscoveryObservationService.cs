@@ -22,14 +22,17 @@ namespace RobleysQuestingFramework
         {
             if (!ZNet.instance || ZRoutedRpc.instance == null ||
                 !view || !view.IsValid() || !view.IsOwner() ||
-                (!sensed && !creature.IsAlerted())) return;
+                (!sensed && !creature.IsAlerted()))
+                return;
 
             var player = creature.GetTargetCreature() as Player;
-            if (!player || player.IsDead() || player.GetPlayerID() == 0) return;
+            if (!player || player.IsDead() || player.GetPlayerID() == 0)
+                return;
 
             var zdo = view.GetZDO();
             var key = Tuple.Create(player.GetPlayerID(), zdo.GetPrefab());
-            if (NextReport.TryGetValue(key, out float next) && Time.time < next) return;
+            if (NextReport.TryGetValue(key, out float next) && Time.time < next)
+                return;
             // Retry during sustained encounters so loading/reconnecting cannot lose discovery.
             NextReport[key] = Time.time + ReportInterval;
 
@@ -48,14 +51,17 @@ namespace RobleysQuestingFramework
 
         static void ReceiveDiscovery(long sender, ZPackage package)
         {
-            if (!ZNet.instance || !ZNet.instance.IsServer() || QuestManager.WorldInstance == null) return;
-            if (sender != ZNet.GetUID() && ZNet.instance.GetPeer(sender) == null) return;
+            if (!ZNet.instance || !ZNet.instance.IsServer() || QuestManager.WorldInstance == null)
+                return;
+            if (sender != ZNet.GetUID() && ZNet.instance.GetPeer(sender) == null)
+                return;
             try
             {
                 var creatureID = package.ReadZDOID();
                 long playerID = package.ReadLong();
                 var creature = ZDOMan.instance.GetZDO(creatureID);
-                if (playerID == 0 || creature == null || creature.GetOwner() != sender) return;
+                if (playerID == 0 || creature == null || creature.GetOwner() != sender)
+                    return;
                 // As with inventory reports, trust observations from modded peers,
                 // but derive the prefab from the server's ZDO rather than the packet.
                 PlayerDiscoveredCreature?.Invoke(playerID, creature.GetPrefab());

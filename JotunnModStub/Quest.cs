@@ -141,11 +141,7 @@ namespace RobleysQuestingFramework
                 return;
 
             Jotunn.Logger.LogInfo($"Cancelling Quest: {Name}");
-            SetStage(
-                (Stage & ~(QuestStage.Started |
-                           QuestStage.CriteriaMet |
-                           QuestStage.Completed))
-                | QuestStage.Cancelled);
+            SetStage((Stage & ~(QuestStage.Started | QuestStage.CriteriaMet | QuestStage.Completed)) | QuestStage.Cancelled);
         }
 
         // Attach/detach this quest's inventory, interaction, etc. listeners.

@@ -61,9 +61,11 @@ namespace RobleysQuestingFramework
             {
                 if (!Factories.ContainsKey(questID))
                     throw new ArgumentException("Unknown quest: " + questID);
+                
                 record = new QuestRecord { PlayerID = id, QuestID = questID };
                 _data.Quests.Add(record);
             }
+            
             return _active.TryGetValue(record, out var quest) ? quest : Activate(record);
         }
 
@@ -104,9 +106,13 @@ namespace RobleysQuestingFramework
                     File.Replace(temporary, _savePath, _savePath + ".bak");
                 else
                     File.Move(temporary, _savePath);
+                
                 Jotunn.Logger.LogInfo("Server quest data saved: " + _savePath);
             }
-            catch (Exception ex) { Jotunn.Logger.LogError("Quest save failed: " + ex); }
+            catch (Exception ex) 
+            { 
+                Jotunn.Logger.LogError("Quest save failed: " + ex); 
+            }
         }
 
         [Serializable]
@@ -132,7 +138,8 @@ namespace RobleysQuestingFramework
             [HarmonyPostfix]
             static void Postfix(ZNet __instance)
             {
-                if (!__instance.IsServer()) return;
+                if (!__instance.IsServer())
+                    return;
                 try
                 {
                     WorldInstance = new QuestManager(__instance.GetWorldUID().ToString(CultureInfo.InvariantCulture));

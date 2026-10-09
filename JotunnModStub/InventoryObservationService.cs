@@ -36,12 +36,14 @@ namespace RobleysQuestingFramework
 
         internal static void Tick()
         {
-            if (!ZNet.instance || ZRoutedRpc.instance == null) return;
+            if (!ZNet.instance || ZRoutedRpc.instance == null)
+                return;
             if (ZNet.instance.IsServer() && QuestManager.WorldInstance != null)
             {
                 var present = new Dictionary<long, long>();
                 foreach (var peer in ZNet.instance.GetPeers())
-                    if (peer.m_playerID != 0) present[peer.m_playerID] = peer.m_uid;
+                    if (peer.m_playerID != 0)
+                        present[peer.m_playerID] = peer.m_uid;
                 if (Player.m_localPlayer && Player.m_localPlayer.GetPlayerID() != 0)
                     present[Player.m_localPlayer.GetPlayerID()] = ZNet.GetUID();
                 foreach (var id in Connections.Keys.ToArray())
@@ -73,7 +75,8 @@ namespace RobleysQuestingFramework
                     ReportSnapshot();
                 }
             }
-            if (SnapshotRequested && LocalInventory != null) ReportSnapshot();
+            if (SnapshotRequested && LocalInventory != null)
+                ReportSnapshot();
             // Snapshot callbacks may create quests or change subscriptions.
             foreach (var source in Sources.Values.ToArray()) source.Dispatch();
         }
@@ -90,7 +93,8 @@ namespace RobleysQuestingFramework
 
         static void SetTracking(long id, bool enabled)
         {
-            if (!Connections.TryGetValue(id, out long peer)) return;
+            if (!Connections.TryGetValue(id, out long peer))
+                return;
             if (peer == ZNet.GetUID())
             {
                 TrackingRequested = enabled;
@@ -102,19 +106,22 @@ namespace RobleysQuestingFramework
 
         static void Detach()
         {
-            if (LocalInventory != null) LocalInventory.m_onChanged -= ReportSnapshot;
+            if (LocalInventory != null)
+                LocalInventory.m_onChanged -= ReportSnapshot;
             LocalInventory = null;
             LocalPlayer = null;
         }
 
         static void ReportSnapshot()
         {
-            if (LocalInventory == null || !LocalPlayer || !ZNet.instance) return;
+            if (LocalInventory == null || !LocalPlayer || !ZNet.instance)
+                return;
             SnapshotRequested = false;
             var counts = new Dictionary<Tuple<string, int>, int>();
             foreach (var item in LocalInventory.GetAllItems())
             {
-                if (!item.m_dropPrefab || item.m_stack <= 0) continue;
+                if (!item.m_dropPrefab || item.m_stack <= 0)
+                    continue;
                 var key = Tuple.Create(item.m_dropPrefab.name, item.m_quality);
                 counts.TryGetValue(key, out int previous);
                 counts[key] = checked(previous + item.m_stack);
@@ -122,7 +129,8 @@ namespace RobleysQuestingFramework
             if (ZNet.instance.IsServer())
             {
                 var source = ForPlayer(LocalPlayer.GetPlayerID());
-                if (source.IsObserved) source.SetSnapshot(counts);
+                if (source.IsObserved)
+                    source.SetSnapshot(counts);
                 return;
             }
             var package = new ZPackage();
@@ -148,14 +156,17 @@ namespace RobleysQuestingFramework
 
         static void ReceiveSnapshot(long sender, ZPackage package)
         {
-            if (!ZNet.instance || !ZNet.instance.IsServer()) return;
+            if (!ZNet.instance || !ZNet.instance.IsServer())
+                return;
             var peer = ZNet.instance.GetPeer(sender);
             if (peer == null || peer.m_playerID == 0 ||
-                !Sources.TryGetValue(peer.m_playerID, out var source) || !source.IsObserved) return;
+                !Sources.TryGetValue(peer.m_playerID, out var source) || !source.IsObserved)
+                return;
             try
             {
                 int entries = package.ReadInt();
-                if (entries < 0 || entries > 4096) return;
+                if (entries < 0 || entries > 4096)
+                    return;
                 var counts = new Dictionary<Tuple<string, int>, int>();
                 for (int i = 0; i < entries; i++)
                 {
@@ -163,7 +174,8 @@ namespace RobleysQuestingFramework
                     int quality = package.ReadInt();
                     int count = package.ReadInt();
                     var key = Tuple.Create(id, quality);
-                    if (string.IsNullOrEmpty(id) || id.Length > 256 || quality <= 0 || count < 0 || counts.ContainsKey(key)) return;
+                    if (string.IsNullOrEmpty(id) || id.Length > 256 || quality <= 0 || count < 0 || counts.ContainsKey(key))
+                        return;
                     counts.Add(key, count);
                 }
                 source.SetSnapshot(counts);

@@ -12,6 +12,7 @@ namespace RobleysQuestingFramework
 
         public KillCriteria Criteria { get; }
         public int KillCount { get; private set; }
+        public override string JournalProgress => $"{Criteria.PrefabName}: {KillCount}/{Criteria.Quantity}";
 
         protected KillQuest(long playerID, KillCriteria criteria) : base(playerID)
         {
@@ -73,6 +74,7 @@ namespace RobleysQuestingFramework
                 KillCount++;
 
             CheckCompletionCriteria();
+            NotifyTrackingChanged();
         }
     }
 }

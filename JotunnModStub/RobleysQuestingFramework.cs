@@ -31,15 +31,21 @@ namespace RobleysQuestingFramework
             // To learn more about Jotunn's features, go to
             // https://valheim-modding.github.io/Jotunn/tutorials/overview.html
 
+            QuestJournal.Initialize(Config);
             TestQuestBootstrap.Register();
             _harmony = new Harmony(PluginGUID);
             _harmony.PatchAll(typeof(QuestManager).Assembly);
         }
 
-        void Update() => InventoryObservationService.Tick();
+        void Update()
+        {
+            InventoryObservationService.Tick();
+            QuestJournal.Tick();
+        }
 
         void OnDestroy()
         {
+            QuestJournal.Destroy();
             TestQuestBootstrap.Unregister();
             QuestManager.Unload();
             InventoryObservationService.Reset();

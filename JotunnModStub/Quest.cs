@@ -19,6 +19,11 @@ namespace RobleysQuestingFramework
     {
         public string Name = "Unnamed quest";
 
+        // Presentation only; quest authors can override this for custom objectives.
+        public virtual string JournalProgress => "";
+        public static event Action<Quest> TrackingChanged;
+        protected void NotifyTrackingChanged() => TrackingChanged?.Invoke(this);
+
         public ZDOID QuestGiverId = ZDOID.None;
 
         [NonSerialized]
@@ -210,6 +215,7 @@ namespace RobleysQuestingFramework
             Stage = next;
             RefreshSubscriptions();
             StageChanged?.Invoke(previous, next);
+            NotifyTrackingChanged();
         }
 
         protected static bool Has(QuestStage stage, QuestStage flags)

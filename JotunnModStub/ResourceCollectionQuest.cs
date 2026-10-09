@@ -10,12 +10,31 @@ namespace RobleysQuestingFramework
     public abstract class ResourceCollectionQuest : Quest
     {
         readonly QuestInventory _inventory;
+        long[] _journalCounts;
+        public override string JournalProgress
+        {
+            get
+            {
+                if (_journalCounts == null) 
+                    return "Waiting for inventory...";
+                
+                var lines = new List<string>();
+                for (int i = 0; i < Criteria.Count; i++)
+                {
+                    var requirement = Criteria[i];
+                    string quality = requirement.Quality.HasValue ? $" (quality {requirement.Quality})" : "";
+                    lines.Add($"{requirement.PrefabName}{quality}: {_journalCounts[i]}/{requirement.Quantity}");
+                }
+                return string.Join("\n", lines);
+            }
+        }
 
         public IReadOnlyList<ResourceCollectionCriteria> Criteria { get; }
 
         public ResourceCollectionQuest(long playerID, params ResourceCollectionCriteria[] criteria)
             : this(InventoryObservationService.ForPlayer(playerID), playerID, criteria)
         {
+
         }
 
         public ResourceCollectionQuest(QuestInventory inventory, long playerID,
@@ -61,7 +80,13 @@ namespace RobleysQuestingFramework
             if (!_inventory.HasSnapshot)
                 return;
 
+            // Keep counts before completion can invalidate the inventory snapshot.
+            // Format journal text lazily, only when a visible client needs it.
+            _journalCounts = new long[Criteria.Count];
+            for (int i = 0; i < Criteria.Count; i++)
+                _journalCounts[i] = Math.Min(_inventory.CountItems(Criteria[i].PrefabName, Criteria[i].Quality), Criteria[i].Quantity);
             SetCriteriaMet(HasRequiredResources());
+            NotifyTrackingChanged();
         }
 
         bool HasRequiredResources()

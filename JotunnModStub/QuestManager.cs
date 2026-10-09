@@ -24,6 +24,15 @@ namespace RobleysQuestingFramework
 
         public static QuestManager WorldInstance { get; private set; }
 
+        public IEnumerable<Quest> GetPlayerQuests(long playerID)
+        {
+            foreach (var quest in _active.Values)
+            {
+                if (quest.PlayerID == playerID && quest.Stage != QuestStage.Hidden)
+                    yield return quest;
+            }
+        }
+
         QuestManager(string worldID)
         {
             _savePath = Path.Combine(DataLoadPath, worldID + ".json");

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using HarmonyLib;
-using UnityEngine;
+using Newtonsoft.Json;
 
 namespace RobleysQuestingFramework
 {
@@ -28,32 +28,65 @@ namespace RobleysQuestingFramework
         {
             _savePath = Path.Combine(DataLoadPath, worldID + ".json");
             _data = File.Exists(_savePath)
-                ? JsonUtility.FromJson<SaveData>(File.ReadAllText(_savePath))
+                ? JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(_savePath))
                 : new SaveData { WorldID = worldID };
             if (_data == null || _data.Version != 1 || _data.WorldID != worldID || _data.Quests == null)
                 throw new InvalidDataException("Invalid or unsupported quest save: " + _savePath);
+            if (File.Exists(_savePath) && _data.Quests.Count == 0)
+                Jotunn.Logger.LogWarning("Quest save contains no player quest records; previously omitted progress cannot be restored: " + _savePath);
             var keys = new HashSet<string>();
             foreach (var record in _data.Quests)
             {
-                if (record == null || !long.TryParse(record.PlayerID, out long parsedPlayerID) || parsedPlayerID == 0 ||
+                if (record == null || !long.TryParse(record.PlayerID, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsedPlayerID) || parsedPlayerID == 0 ||
                     string.IsNullOrEmpty(record.QuestID) || record.Stage < 0 || (record.Stage & ~31) != 0 ||
-                    !keys.Add(record.PlayerID + ":" + record.QuestID))
+                    !keys.Add(parsedPlayerID.ToString(CultureInfo.InvariantCulture) + ":" + record.QuestID))
                     throw new InvalidDataException("Invalid quest record in " + _savePath);
+                record.PlayerID = parsedPlayerID.ToString(CultureInfo.InvariantCulture);
             }
             // Validate the whole file before attaching any quest listeners.
-            foreach (var record in _data.Quests)
+            try
             {
-                // Retain records for unavailable quest definitions without discarding them.
-                if (Factories.ContainsKey(record.QuestID))
-                    Activate(record);
+                foreach (var record in _data.Quests)
+                {
+                    // Retain records for unavailable quest definitions without discarding them.
+                    if (Factories.ContainsKey(record.QuestID))
+                        Activate(record);
+                }
+            }
+            catch
+            {
+                foreach (var quest in _active.Values) 
+                    quest.Unsubscribe();
+                
+                throw;
             }
             Jotunn.Logger.LogInfo("Server quest data loaded: " + _savePath);
         }
 
-        public static void RegisterQuest(string id, Func<long, QuestInventory, Quest> factory) => Factories[id] = factory;
+        public static void RegisterQuest(string id, Func<long, QuestInventory, Quest> factory)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new ArgumentException("A quest needs an ID.", nameof(id));
+            if (factory == null)
+                throw new ArgumentNullException(nameof(factory));
+
+            Factories[id] = factory;
+            var manager = WorldInstance;
+            if (manager == null)
+                return;
+
+            foreach (var record in manager._data.Quests)
+            {
+                if (record.QuestID == id && !manager._active.ContainsKey(record))
+                    manager.Activate(record);
+            }
+        }
 
         public Quest GetOrAddQuest(long playerID, string questID, out bool created)
         {
+            if (playerID == 0)
+                throw new ArgumentException("A quest needs a valid character ID.", nameof(playerID));
+            
             string id = playerID.ToString(CultureInfo.InvariantCulture);
             var record = _data.Quests.Find(q => q.PlayerID == id && q.QuestID == questID);
             created = record == null;
@@ -72,11 +105,18 @@ namespace RobleysQuestingFramework
         public static void Unload()
         {
             var manager = WorldInstance;
-            if (manager == null) return;
-            try { manager.Save(); }
+            if (manager == null)
+                return;
+            
+            try 
+            { 
+                manager.Save();
+            }
             finally
             {
-                foreach (var quest in manager._active.Values) quest.Unsubscribe();
+                foreach (var quest in manager._active.Values) 
+                    quest.Unsubscribe();
+                
                 WorldInstance = null;
             }
         }
@@ -88,26 +128,57 @@ namespace RobleysQuestingFramework
             quest.RestoreProgress(record.Progress);
             quest.RestoreStage((QuestStage)record.Stage);
             _active.Add(record, quest);
-            quest.StageChanged += (previous, current) => record.Stage = (int)current;
-            quest.Subscribe();
+
+            try 
+            { 
+                quest.Subscribe();
+            }
+            catch
+            {
+                quest.Unsubscribe();
+                _active.Remove(record);
+                throw;
+            }
             return quest;
         }
 
-        void Save()
+        // Snapshot runtime state at world-save/unload boundaries, never per observation.
+        public void Save()
         {
-            if (!ZNet.instance || !ZNet.instance.IsServer()) return;
+            if (!ZNet.instance || !ZNet.instance.IsServer())
+                return;
+            
             try
             {
                 Directory.CreateDirectory(DataLoadPath);
-                foreach (var entry in _active) entry.Key.Progress = entry.Value.SaveProgress();
+                foreach (var entry in _active)
+                {
+                    entry.Key.Stage = (int)entry.Value.Stage;
+                    entry.Key.Progress = entry.Value.SaveProgress();
+                }
+                
+                string json = JsonConvert.SerializeObject(_data, Formatting.Indented);
+                // Never replace the previous save if the serializer omits player records.
+                var check = JsonConvert.DeserializeObject<SaveData>(json);
+                if (check == null || check.Quests == null || check.Quests.Count != _data.Quests.Count)
+                    throw new InvalidDataException("Quest serialization omitted player records.");
+                for (int i = 0; i < _data.Quests.Count; i++)
+                {
+                    var expected = _data.Quests[i];
+                    var actual = check.Quests[i];
+                    if (actual == null || actual.PlayerID != expected.PlayerID || actual.QuestID != expected.QuestID ||
+                        actual.Stage != expected.Stage || actual.Progress != expected.Progress)
+                        throw new InvalidDataException("Quest serialization changed player progress.");
+                }
+
                 string temporary = _savePath + ".tmp";
-                File.WriteAllText(temporary, JsonUtility.ToJson(_data, true));
+                File.WriteAllText(temporary, json);
                 if (File.Exists(_savePath))
                     File.Replace(temporary, _savePath, _savePath + ".bak");
                 else
                     File.Move(temporary, _savePath);
                 
-                Jotunn.Logger.LogInfo("Server quest data saved: " + _savePath);
+                Jotunn.Logger.LogInfo("Server quest data saved (" + _data.Quests.Count + " quest records): " + _savePath);
             }
             catch (Exception ex) 
             { 

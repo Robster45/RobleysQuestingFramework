@@ -113,6 +113,9 @@ namespace RobleysQuestingFramework
 
             Jotunn.Logger.LogInfo($"Starting Quest: {Name}");
             SetStage(Stage | QuestStage.Started);
+
+            if (MessageHud.instance)
+                MessageHud.instance.ShowMessage(MessageHud.MessageType.Center, $"{Name} Started");
         }
 
         public void CompleteQuest()
@@ -125,6 +128,10 @@ namespace RobleysQuestingFramework
             Jotunn.Logger.LogInfo($"Completing Quest: {Name}");
             SetStage(Stage | QuestStage.Completed);
             ActivateQuestCompletionEffects();
+
+            if (MessageHud.instance)
+                MessageHud.instance.ShowMessage(MessageHud.MessageType.Center, $"{Name} Completed");
+
             Completed?.Invoke();
         }
 

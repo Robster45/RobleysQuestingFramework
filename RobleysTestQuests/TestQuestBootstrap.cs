@@ -9,12 +9,17 @@ namespace RobleysTestQuests
 
         public static void Register()
         {
+            QuestRewardService.Register(TestQuest_10Wood.RewardHandler, TestQuest_10Wood.ApplyReward);
             QuestManager.RegisterQuest(WoodQuestID, (playerID, inventory) => new TestQuest_10Wood(inventory, playerID));
             QuestManager.RegisterQuest(KillQuestID, (playerID, inventory) => new TestQuest_KillNecks(playerID));
             InventoryObservationService.PlayerAvailable += LoadTestQuests;
         }
 
-        public static void Unregister() => InventoryObservationService.PlayerAvailable -= LoadTestQuests;
+        public static void Unregister()
+        {
+            InventoryObservationService.PlayerAvailable -= LoadTestQuests;
+            QuestRewardService.Unregister(TestQuest_10Wood.RewardHandler);
+        }
 
         static void LoadTestQuests(long playerID)
         {

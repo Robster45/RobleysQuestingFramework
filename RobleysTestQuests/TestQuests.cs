@@ -26,17 +26,18 @@ namespace RobleysTestQuests
 
         protected override void ActivateQuestCompletionEffects()
         {
-            Player player = Player.GetPlayer(PlayerID);
-            Jotunn.Logger.LogInfo($"Wood payout: found={player != null}, local={player && player == Player.m_localPlayer}");
+            QuestManager.WorldInstance.QueueReward(this, "wood-payout-v1", RewardHandler);
+        }
 
-            // This example requires the player object to be loaded on the server.
-            // Remote-client reward delivery still needs a separate implementation.
-            if (player)
-            {
-                Jotunn.Logger.LogInfo($"QUEST COMPLETED: Removing 10 wood, adding 100 xp to woodcutting skill");
-                player.RaiseSkill(Skills.SkillType.WoodCutting, 100);
-                player.GetInventory().RemoveItem("$item_wood", RequiredWood);
-            }
+        public const string RewardHandler = "robleys.test.wood-payout-v1";
+
+        public static bool ApplyReward(Player player, string payload)
+        {
+            if (payload != "" || player.GetInventory().CountItems("$item_wood") < RequiredWood)
+                return false;
+            player.GetInventory().RemoveItem("$item_wood", RequiredWood);
+            player.RaiseSkill(Skills.SkillType.WoodCutting, 100);
+            return true;
         }
     }
 

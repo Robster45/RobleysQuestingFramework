@@ -3,7 +3,7 @@
 This is an unofficial Valheim mod project and is not affiliated with, endorsed by, or sponsored by Iron Gate Studio or Coffee Stain Publishing.
 
 A Valheim quest framework using [Jötunn](https://github.com/Valheim-Modding/Jotunn), including build tools and a companion Unity project.
-This project includes a server-owned quest framework. The optional `RobleysTestQuests` plugin contains all three playable test quests (wood, necks, and the boar); the framework alone registers no sample quests. Start with [Writing quests](QUEST-AUTHORING.md) for event subscriptions, NPC interactions, hand-ins, and persistence. [A boar's trust](BOAR-QUEST.md) describes the playable example and in-game checks.
+This project includes a server-owned quest framework. The optional `RobleysTestQuests` plugin contains four playable test quests (wood, necks, the boar, and [Hildir's Favor](RobleysTestQuests/README.md#hildirs-favor)); the framework alone registers no sample quests. Start with [Writing quests](QUEST-AUTHORING.md) for event subscriptions, NPC interactions, hand-ins, and persistence. [A boar's trust](BOAR-QUEST.md) describes the playable example and in-game checks.
 
 ## Separate plugins
 

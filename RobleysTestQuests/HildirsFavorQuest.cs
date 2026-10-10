@@ -1,6 +1,5 @@
 using System;
 using RobleysQuestingFramework;
-using UnityEngine;
 
 namespace RobleysTestQuests
 {
@@ -110,18 +109,7 @@ namespace RobleysTestQuests
 
         public static bool ApplyReward(Player player, string payload)
         {
-            if (payload != "" || !ObjectDB.instance)
-            {
-                return false;
-            }
-            GameObject coins = ObjectDB.instance.GetItemPrefab("Coins");
-            Inventory inventory = player.GetInventory();
-            // Check the entire payout before adding anything so a retry cannot duplicate a partial payout.
-            if (!coins || !inventory.CanAddItem(coins, RewardGold))
-            {
-                return false;
-            }
-            return inventory.AddItem("Coins", RewardGold, 1, 0, 0L, "", false, false) != null;
+            return payload == "" && ItemRewardService.GiveOrDrop(player, "Coins", RewardGold);
         }
     }
 }

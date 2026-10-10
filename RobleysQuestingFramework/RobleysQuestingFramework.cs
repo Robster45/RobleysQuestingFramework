@@ -41,6 +41,9 @@ namespace RobleysQuestingFramework
             InventoryObservationService.Tick();
             QuestRewardService.Tick();
             QuestNpcService.Tick();
+            ExploreObservationService.Tick();
+            DungeonObservationService.Tick();
+            RevengeQuestService.Tick();
             QuestJournal.Tick();
         }
 
@@ -50,7 +53,11 @@ namespace RobleysQuestingFramework
             QuestManager.Unload();
             InventoryObservationService.Reset();
             KillObservationService.Reset();
+            SpawnerObservationService.Reset();
             CreatureDiscoveryObservationService.Reset();
+            ExploreObservationService.Reset();
+            DungeonObservationService.Reset();
+            RevengeQuestService.Reset();
             QuestNpcService.Reset();
             _harmony?.UnpatchSelf();
         }

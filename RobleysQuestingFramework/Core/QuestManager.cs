@@ -387,7 +387,11 @@ namespace RobleysQuestingFramework
                 Unload();
                 InventoryObservationService.Reset();
                 KillObservationService.Reset();
+                SpawnerObservationService.Reset();
                 CreatureDiscoveryObservationService.Reset();
+                ExploreObservationService.Reset();
+                DungeonObservationService.Reset();
+                RevengeQuestService.Reset();
             }
         }
 

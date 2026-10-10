@@ -14,8 +14,11 @@ Playable examples are supplied separately by the optional `RobleysTestQuests` pl
 | --- | --- |
 | `Core/` | Quest lifecycle, registration, player state, and persistence (`Quest`, `QuestManager`). |
 | `Quests/Kills/` | Reusable kill quests and matching criteria. |
+| `Quests/Clear/` | Reusable clear-area lifecycle, enemy/spawner status and loaded-empty confirmation. |
+| `Quests/Explore/` | Reusable visit-and-clear location quests. |
+| `Quests/Spawners/` | Reusable discover-and-destroy spawner quests with saved counts. |
 | `Quests/Resources/` | Reusable resource collection quests and matching criteria. |
-| `Tracking/` | Observing inventory changes, kills, creature discovery, and locations. |
+| `Tracking/` | Observing inventory changes, kills, creature discovery, locations and player deaths; enemy promotion through `IRevengeTarget`. |
 | `Inventory/` | Server-side inventory model and item identity. |
 | `Npcs/` | Quest NPC definitions, spawning, and interactions. |
 | `HandIns/` | Item payment transport and resource allocation plans. |
@@ -25,5 +28,9 @@ Playable examples are supplied separately by the optional `RobleysTestQuests` pl
 | `Package/` | Distribution README, manifest, and icon. |
 
 Start with `Core/Quest.cs` for the quest API and `Quests/` for reusable implementations. See [Writing quests](../QUEST-AUTHORING.md) for authoring guidance and `../RobleysTestQuests/` for playable examples.
+
+See [Explore and revenge quests](../EXPLORE-REVENGE-QUESTS.md) for location authoring, automatic revenge behavior, and multiplayer checks.
+
+See [Clear and destroy-spawner quests](../CLEAR-QUESTS.md) for reusable bases and the per-chamber burial quest. Dungeon entry, loaded-area sampling and networking remain framework services; concrete quest registrations and rewards belong to the test plugin.
 
 All framework types retain the `RobleysQuestingFramework` namespace; folders organize the source without changing the public API. The SDK project automatically includes source files in these subdirectories. The regression harness in `../tests/Persistence/` links selected production files explicitly, so update its project references when moving those files.

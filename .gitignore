@@ -24,6 +24,7 @@
 
 # .NET build artifacts
 artifacts/
+tests/.tmp/
 
 # Publish output
 publish/
@@ -101,6 +102,7 @@ x86/
 
 # Local Unity project contains copied game assemblies and assets
 **/RobleysQuestingFrameworkUnity/*
+**/[Tt]ests/*
 
 # Local development paths
 Environment.props

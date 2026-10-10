@@ -3,9 +3,11 @@
 This is an unofficial Valheim mod project and is not affiliated with, endorsed by, or sponsored by Iron Gate Studio or Coffee Stain Publishing.
 
 A Valheim quest framework using [Jötunn](https://github.com/Valheim-Modding/Jotunn), including build tools and a companion Unity project.
-This project includes a server-owned quest framework. The optional `RobleysTestQuests` plugin contains four playable test quests (wood, necks, the boar, and [Hildir's Favor](RobleysTestQuests/README.md#hildirs-favor)); the framework alone registers no sample quests. Start with [Writing quests](QUEST-AUTHORING.md) for event subscriptions, NPC interactions, hand-ins, and persistence. [A boar's trust](BOAR-QUEST.md) describes the playable example and in-game checks.
+This project includes a server-owned quest framework. The optional `RobleysTestQuests` plugin contains seven playable test quests (wood, necks, the boar, revenge, [greydwarf nests](RobleysTestQuests/README.md#clear-the-greydwarf-nests), [burial chambers](RobleysTestQuests/README.md#clear-burial-chambers), and [Hildir's Favor](RobleysTestQuests/README.md#hildirs-favor)); the framework alone registers no sample quests. Start with [Writing quests](QUEST-AUTHORING.md) for event subscriptions, NPC interactions, hand-ins, and persistence. [A boar's trust](BOAR-QUEST.md) describes the playable example and in-game checks.
 
 ## Separate plugins
+
+The optional test plugin includes automatic revenge quests: an enemy that kills a player gains one star, and the player must kill that exact creature before their next death. Quest authors can also derive from `ExploreQuest` to define locations to visit and clear. See [Explore and revenge quests](EXPLORE-REVENGE-QUESTS.md) for authoring and in-game verification.
 
 For a guide to the framework's source directories, see [Source layout](RobleysQuestingFramework/README.md#source-layout).
 

@@ -10,6 +10,7 @@ namespace RobleysQuestingFramework
         const string KillRPC = "RobleysQuestingFramework.CreatureKilled";
         static readonly HashSet<ZDOID> Reported = new HashSet<ZDOID>();
         public static event Action<long, int> PlayerKilledCreature;
+        public static event Action<long, ZDOID> CreatureDied;
 
         public static void Reset() => Reported.Clear();
 
@@ -24,9 +25,13 @@ namespace RobleysQuestingFramework
                 ZDOID victim = package.ReadZDOID();
                 long playerID = package.ReadLong();
                 int prefab = package.ReadInt();
-                if (victim == ZDOID.None || playerID == 0 || !Reported.Add(victim))
+                if (victim == ZDOID.None || !Reported.Add(victim))
                     return;
-                PlayerKilledCreature?.Invoke(playerID, prefab);
+                CreatureDied?.Invoke(playerID, victim);
+                if (playerID != 0)
+                {
+                    PlayerKilledCreature?.Invoke(playerID, prefab);
+                }
             }
             catch (Exception ex) { Jotunn.Logger.LogWarning("Invalid kill report: " + ex.Message); }
         }
@@ -48,12 +53,10 @@ namespace RobleysQuestingFramework
                     !___m_nview || !___m_nview.IsValid() || !___m_nview.IsOwner())
                     return;
                 Player killer = ___m_lastHit?.GetAttacker() as Player;
-                if (!killer || killer.GetPlayerID() == 0)
-                    return;
                 ZDO victim = ___m_nview.GetZDO();
                 ZPackage package = new ZPackage();
                 package.Write(victim.m_uid);
-                package.Write(killer.GetPlayerID());
+                package.Write(killer ? killer.GetPlayerID() : 0L);
                 package.Write(victim.GetPrefab());
                 if (ZNet.instance.IsServer())
                 {

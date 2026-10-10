@@ -8,8 +8,12 @@ namespace RobleysQuestingFramework
         // Call on the receiving character's client from a registered reward handler.
         // False means no effects were applied; successful ground drops count as delivery.
         public static bool GiveOrDrop(Player player, string prefabName, int amount)
+            => GiveOrDrop(player, prefabName, amount, 1);
+
+        // Explicit quality permits special quest rewards above the normal crafting cap.
+        public static bool GiveOrDrop(Player player, string prefabName, int amount, int quality)
         {
-            if (!player || amount <= 0 || !ObjectDB.instance)
+            if (!player || amount <= 0 || quality <= 0 || !ObjectDB.instance)
             {
                 return false;
             }
@@ -26,6 +30,8 @@ namespace RobleysQuestingFramework
                 ItemDrop.ItemData item = template.m_itemData.Clone();
                 item.m_dropPrefab = prefab;
                 item.m_worldLevel = Game.m_worldLevel;
+                item.m_quality = quality;
+                item.m_durability = item.GetMaxDurability();
                 item.m_stack = Math.Min(remaining, item.m_shared.m_maxStackSize);
                 remaining -= item.m_stack;
                 // Vanilla AddItem can partially fill existing stacks before returning false.

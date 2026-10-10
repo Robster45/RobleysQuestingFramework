@@ -12,6 +12,10 @@
 
 # Debug symbols
 *.pdb
+*.mdb
+
+# Compiled assemblies, including local game and publicized assemblies
+*.[Dd][Ll][Ll]
 
 # NuGet Packages
 *.nupkg
@@ -23,6 +27,8 @@ artifacts/
 
 # Publish output
 publish/
+*.[Zz][Ii][Pp]
+**/[Pp]ackage/[Pp]lugins/
 
 ### Unity
 # Unity generated directories
@@ -93,7 +99,7 @@ x86/
 # Publish Web Output
 *.[Pp]ublish.xml
 
-# Unity project to avoid DMC Takedowns!
+# Local Unity project contains copied game assemblies and assets
 **/RobleysQuestingFrameworkUnity/*
 
 # Local development paths

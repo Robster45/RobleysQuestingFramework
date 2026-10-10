@@ -12,17 +12,31 @@ namespace RobleysQuestingFramework
     {
         static readonly Dictionary<string, Func<long, QuestInventory, Quest>> Factories =
             new Dictionary<string, Func<long, QuestInventory, Quest>>();
+        static readonly HashSet<string> DiscoveryQuests = new HashSet<string>();
+
+        static QuestManager() => InventoryObservationService.PlayerAvailable += EnsurePlayerQuests;
+
+        static void EnsurePlayerQuests(long playerID)
+        {
+            if (WorldInstance == null)
+                return;
+            foreach (string id in DiscoveryQuests)
+                WorldInstance.GetOrAddQuest(playerID, id, out _);
+        }
 
         static readonly string DataLoadPath = Path.Combine(
             BepInEx.Paths.ConfigPath, "RobleysQuestingFramework", "worlds");
 
         readonly Dictionary<QuestRecord, Quest> _active = new Dictionary<QuestRecord, Quest>();
+        readonly List<Quest> _worldRestorePending = new List<Quest>();
 
         readonly SaveData _data;
 
         readonly string _savePath;
 
         public static QuestManager WorldInstance { get; private set; }
+
+        public IEnumerable<Quest> AllQuests => _active.Values;
 
         public IEnumerable<Quest> GetPlayerQuests(long playerID)
         {
@@ -73,6 +87,9 @@ namespace RobleysQuestingFramework
         }
 
         public static void RegisterQuest(string id, Func<long, QuestInventory, Quest> factory)
+            => RegisterQuest(id, factory, false);
+
+        public static void RegisterQuest(string id, Func<long, QuestInventory, Quest> factory, bool discoverForEveryPlayer)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("A quest needs an ID.", nameof(id));
@@ -80,7 +97,11 @@ namespace RobleysQuestingFramework
                 throw new ArgumentNullException(nameof(factory));
 
             Factories[id] = factory;
-            var manager = WorldInstance;
+            if (discoverForEveryPlayer)
+                DiscoveryQuests.Add(id);
+            else
+                DiscoveryQuests.Remove(id);
+            QuestManager manager = WorldInstance;
             if (manager == null)
                 return;
 
@@ -133,14 +154,16 @@ namespace RobleysQuestingFramework
         Quest Activate(QuestRecord record)
         {
             long playerID = long.Parse(record.PlayerID, CultureInfo.InvariantCulture);
-            var quest = Factories[record.QuestID](playerID, InventoryObservationService.ForPlayer(playerID));
+            Quest quest = Factories[record.QuestID](playerID, InventoryObservationService.ForPlayer(playerID));
+            quest.QuestGiverId = new ZDOID(record.GiverUser, record.GiverID);
             quest.RestoreProgress(record.Progress);
             quest.RestoreStage((QuestStage)record.Stage);
             _active.Add(record, quest);
 
-            try 
-            { 
+            try
+            {
                 quest.Subscribe();
+                _worldRestorePending.Add(quest);
             }
             catch
             {
@@ -149,6 +172,14 @@ namespace RobleysQuestingFramework
                 throw;
             }
             return quest;
+        }
+
+        public void RestoreWorldEffects()
+        {
+            Quest[] pending = _worldRestorePending.ToArray();
+            _worldRestorePending.Clear();
+            foreach (Quest quest in pending)
+                quest.OnWorldReady();
         }
 
         // Snapshot runtime state at world-save/unload boundaries, never per observation.
@@ -164,8 +195,10 @@ namespace RobleysQuestingFramework
                 {
                     entry.Key.Stage = (int)entry.Value.Stage;
                     entry.Key.Progress = entry.Value.SaveProgress();
+                    entry.Key.GiverUser = entry.Value.QuestGiverId.UserID;
+                    entry.Key.GiverID = entry.Value.QuestGiverId.ID;
                 }
-                
+
                 string json = JsonConvert.SerializeObject(_data, Formatting.Indented);
                 // Never replace the previous save if the serializer omits player records.
                 SaveData check = JsonConvert.DeserializeObject<SaveData>(json);
@@ -203,6 +236,8 @@ namespace RobleysQuestingFramework
             public string QuestID;
             public int Stage;
             public int Progress;
+            public long GiverUser;
+            public uint GiverID;
         }
 
         [Serializable]

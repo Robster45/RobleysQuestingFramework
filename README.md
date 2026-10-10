@@ -1,7 +1,7 @@
 # JötunnModStub
 
 A Valheim mod stub project using [Jötunn](https://github.com/Valheim-Modding/Jotunn) including build tools and a basic Unity project stub.
-This project now includes a server-owned quest framework. Start with [Writing quests](QUEST-INVENTORY.md) for the base class contract, example quests, inventory design, and current limitations.
+This project now includes a server-owned quest framework. Start with [Writing quests](QUEST-AUTHORING.md) for event subscriptions, NPC interactions, hand-ins, and persistence. [A boar's trust](BOAR-QUEST.md) describes the playable example and in-game checks.
 
 #  Setup Guide
 

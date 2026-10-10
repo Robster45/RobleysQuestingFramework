@@ -95,6 +95,12 @@ namespace RobleysQuestingFramework
         /// </summary>
         public virtual void RestoreProgress(int progress) { }
 
+        /// <summary>
+        /// Called once after activation when the server world is ready. Reconcile persistent
+        /// world effects here; do not replay consumable rewards. Subscriptions are already attached.
+        /// </summary>
+        public virtual void OnWorldReady() { }
+
         public void RestoreStage(QuestStage stage)
         {
             if (_subscriptionsEnabled)

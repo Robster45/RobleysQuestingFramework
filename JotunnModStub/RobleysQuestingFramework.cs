@@ -33,6 +33,7 @@ namespace RobleysQuestingFramework
 
             QuestJournal.Initialize(Config);
             TestQuestBootstrap.Register();
+            BoarRunestoneQuest.Register();
             _harmony = new Harmony(PluginGUID);
             _harmony.PatchAll(typeof(QuestManager).Assembly);
         }
@@ -40,6 +41,7 @@ namespace RobleysQuestingFramework
         void Update()
         {
             InventoryObservationService.Tick();
+            QuestNpcService.Tick();
             QuestJournal.Tick();
         }
 
@@ -51,6 +53,7 @@ namespace RobleysQuestingFramework
             InventoryObservationService.Reset();
             KillObservationService.Reset();
             CreatureDiscoveryObservationService.Reset();
+            QuestNpcService.Reset();
             _harmony?.UnpatchSelf();
         }
     }

@@ -1,5 +1,7 @@
 using RobleysQuestingFramework;
 using System;
+using System.Globalization;
+using System.Linq;
 
 namespace RobleysTestQuests
 {
@@ -29,21 +31,28 @@ namespace RobleysTestQuests
         }
 
         protected override void SubscribeDiscoveryEvents()
-            => _locationWatch = LocationObservationService.Subscribe(PlayerID, "Runestone_Boars", 12f, EncounterStone);
+        { }
 
-        protected override void UnsubscribeDiscoveryEvents()
-        {
-            _locationWatch?.Dispose();
-            _locationWatch = null;
-        }
+        protected override void UnsubscribeDiscoveryEvents() { }
 
         protected override void ConfigureSubscriptions()
         {
             base.ConfigureSubscriptions();
-            // Hidden players may also discover a boar spawned by someone else by interacting.
+            // The original record remains the per-player dispatcher, including for legacy saves.
+            RegisterSubscription(stage => InstanceKey.Length == 0,
+                () =>
+                {
+                    _locationWatch = LocationObservationService.Subscribe(PlayerID, "Runestone_Boars", 12f, EncounterStone);
+                    QuestNpcService.Interacted += RouteInteraction;
+                },
+                () =>
+                {
+                    _locationWatch?.Dispose();
+                    _locationWatch = null;
+                    QuestNpcService.Interacted -= RouteInteraction;
+                });
             RegisterSubscription(stage => !IsFinishedStage(stage),
-                () => QuestNpcService.Interacted += InteractWithBoar,
-                () => { QuestNpcService.Interacted -= InteractWithBoar; QuestHandInService.Cancel(this); });
+                () => { }, () => QuestHandInService.Cancel(this));
             RegisterSubscription(stage => Has(stage, QuestStage.Discovered) && !IsFinishedStage(stage),
                 () => { QuestNpcService.AttackedByPlayer += BoarAttacked; QuestNpcService.Updated += CheckBoar; },
                 () => { QuestNpcService.AttackedByPlayer -= BoarAttacked; QuestNpcService.Updated -= CheckBoar; });
@@ -51,15 +60,37 @@ namespace RobleysTestQuests
 
         void EncounterStone(LocationEncounter encounter)
         {
-            if (Stage != QuestStage.Hidden || encounter.PlayerID != PlayerID)
+            if (encounter.PlayerID != PlayerID)
                 return;
             ZDOID giver = QuestNpcService.SpawnOnce(PlayerID, encounter.PersistentKey("rqf_boar_stone"), Boar);
             if (giver == ZDOID.None)
                 return;
-            QuestGiverId = giver;
-            Discover();
+            BoarRunestoneQuest quest = ForBoar(giver);
+            quest.QuestGiverId = giver;
+            quest.Discover();
             QuestManager.WorldInstance.Save();
             QuestNetwork.Tell(PlayerID, "A friendly two-star boar appears nearby. Interact with it to earn its trust.");
+        }
+
+        BoarRunestoneQuest ForBoar(ZDOID giver)
+        {
+            BoarRunestoneQuest existing = QuestManager.WorldInstance.AllQuests
+                .OfType<BoarRunestoneQuest>()
+                .FirstOrDefault(quest => quest.PlayerID == PlayerID && quest.QuestGiverId == giver);
+            if (existing != null)
+                return existing;
+            if (Stage == QuestStage.Hidden && QuestGiverId == ZDOID.None)
+                return this;
+            string key = giver.UserID.ToString(CultureInfo.InvariantCulture) + "_" +
+                giver.ID.ToString(CultureInfo.InvariantCulture);
+            return (BoarRunestoneQuest)QuestManager.WorldInstance.GetOrAddQuest(PlayerID, ID, key, out _);
+        }
+
+        void RouteInteraction(long playerID, ZDOID giver)
+        {
+            if (playerID != PlayerID || !QuestNpcService.Matches(giver, ID))
+                return;
+            ForBoar(giver).InteractWithBoar(playerID, giver);
         }
 
         void InteractWithBoar(long playerID, ZDOID giver)
@@ -67,10 +98,7 @@ namespace RobleysTestQuests
             if (playerID != PlayerID || IsFinishedStage(Stage) || !QuestNpcService.Matches(giver, ID))
                 return;
             if (QuestGiverId != ZDOID.None && QuestGiverId != giver)
-            {
-                QuestNetwork.Tell(PlayerID, "Return to the boar that gave you your quest.");
                 return;
-            }
             if (!QuestNpcService.CanClaim(this, giver))
             {
                 QuestNetwork.Tell(PlayerID, "This boar is already waiting for another adventurer's raspberries.");

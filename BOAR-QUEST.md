@@ -4,11 +4,11 @@ This quest is supplied by the optional `RobleysTestQuests` plugin. Install it al
 
 Approaching within 12 metres of a generated `Runestone_Boars` location spawns one friendly, untamed two-star boar beside the visitor. Each stone spawns its quest boar only once per saved world. This uses a world global key, so revisiting, reconnecting, and normal world reloads do not duplicate the encounter. Other runestone types do not trigger it.
 
-The quest becomes discovered at this encounter and awaits interaction to start. Only a hidden, eligible quest watches for new encounters; finished quests no longer spawn boars. Another player may accept an existing unclaimed boar first, in which case the original discoverer's quest is cancelled when its giver is claimed.
+The quest becomes discovered at this encounter and awaits interaction to start. Every player continues watching for new stones, including while another boar quest is active or finished. Another player may accept an existing unclaimed boar first, in which case the original discoverer's quest is cancelled when its giver is claimed.
 
 Interact with the boar to accept **A boar's trust**. The first player to accept claims that boar's quest. Bring **100 raspberries in that player's inventory**, then interact again to hand them in. Multiple inventory stacks count. There are no partial or shared contributions. The payment removes exactly 100 raspberries and automatically tames the same two-star boar. Normal ground feeding cannot bypass the quest. After completion it uses ordinary tamed-boar behavior.
 
-The quest is currently once per character per world. An active quest must be handed in at its original boar. If that boar is destroyed before completion, the quest is cancelled; the stone does not spawn a replacement. The quest boar is peaceful but not invulnerable.
+Each stone offers an independent quest, with one quest boar per stone per world. A character can have multiple boar quests active at once; completion or cancellation at one stone does not block another. Existing saved quests keep their original progress and boar association. An active quest must be handed in at its original boar. If that boar is destroyed before completion, the quest is cancelled; the stone does not spawn a replacement. The quest boar is peaceful but not invulnerable.
 
 If any player hits the boar before completion (including before accepting), it immediately becomes an ordinary hostile boar and targets the attacker. Its active quest is cancelled, pending hand-in authorization is revoked, and it no longer offers this quest. The betrayal flag persists in the boar's world data across reloads. Environmental damage and attacks from non-player creatures do not trigger betrayal. Once the quest is completed, the tamed boar uses normal game behavior.
 
@@ -36,3 +36,5 @@ In game, verify on both a local world and a dedicated server:
 6. Disconnect around hand-in and reconnect. Retry interaction if unfinished and confirm a saved receipt does not charge twice. Test ownership transfer by having the accepting player leave while another player stays nearby.
 7. Destroy an unfinished quest boar and verify cancellation. Ordinary boars and other runestones must retain their normal behavior.
 8. Hit a quest boar before acceptance and during an active quest, using both melee and ranged attacks. Confirm immediate hostility, cancellation in the journal, no further quest interaction or reward, and no replacement spawn. Repeat with a second player attacking and with the boar owned by another peer. Save/reload and verify hostility and cancellation persist. Confirm environmental damage does not cancel the quest.
+
+9. Visit two different boar stones with the same character and accept both quests. Pay one boar and verify the other remains unfinished. Complete or cancel each, then visit a third stone. Save/restart and confirm all outcomes persist and old stones never respawn their boars.

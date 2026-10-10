@@ -1,4 +1,5 @@
 using BepInEx;
+using System;
 
 namespace RobleysTestQuests
 {
@@ -11,14 +12,18 @@ namespace RobleysTestQuests
         public const string PluginName = "RobleysTestQuests";
         public const string PluginVersion = "0.0.1";
 
+        IDisposable _declarative;
+
         void Awake()
         {
+            _declarative = DeclarativeExamples.Register();
             TestQuestBootstrap.Register();
             BoarRunestoneQuest.Register();
         }
 
         void OnDestroy()
         {
+            _declarative?.Dispose();
             TestQuestBootstrap.Unregister();
         }
     }

@@ -4,11 +4,12 @@ using System.Globalization;
 using System.IO;
 using HarmonyLib;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace RobleysQuestingFramework
 {
     // Owns server-side state only. Quest definitions and test setup live elsewhere.
-    public class QuestManager
+    public partial class QuestManager
     {
         static readonly Dictionary<string, Func<long, QuestInventory, Quest>> Factories =
             new Dictionary<string, Func<long, QuestInventory, Quest>>();
@@ -21,8 +22,10 @@ namespace RobleysQuestingFramework
             if (WorldInstance == null)
                 return;
             foreach (string id in DiscoveryQuests)
-                WorldInstance.GetOrAddQuest(playerID, id, out _);
+                NotifyAvailable(WorldInstance.GetOrAddQuest(playerID, id, out _), playerID);
         }
+
+        static readonly JsonSerializerSettings SaveSettings = new JsonSerializerSettings { DateParseHandling = DateParseHandling.None };
 
         static readonly string DataLoadPath = Path.Combine(
             BepInEx.Paths.ConfigPath, "RobleysQuestingFramework", "worlds");
@@ -80,9 +83,9 @@ namespace RobleysQuestingFramework
         {
             _savePath = Path.Combine(DataLoadPath, worldID + ".json");
             _data = File.Exists(_savePath)
-                ? JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(_savePath))
+                ? JsonConvert.DeserializeObject<SaveData>(File.ReadAllText(_savePath), SaveSettings)
                 : new SaveData { WorldID = worldID };
-            if (_data == null || _data.Version != 1 || _data.WorldID != worldID || _data.Quests == null)
+            if (_data == null || (_data.Version != 1 && _data.Version != 2) || _data.WorldID != worldID || _data.Quests == null)
                 throw new InvalidDataException("Invalid or unsupported quest save: " + _savePath);
             if (File.Exists(_savePath) && _data.Quests.Count == 0)
                 Jotunn.Logger.LogWarning("Quest save contains no player quest records; previously omitted progress cannot be restored: " + _savePath);
@@ -137,6 +140,8 @@ namespace RobleysQuestingFramework
             if (factory == null)
                 throw new ArgumentNullException(nameof(factory));
 
+            if (DefinitionOwners.Contains(id))
+                throw new InvalidOperationException("Quest ID belongs to a declarative module: " + id);
             Factories[id] = factory;
             if (discoverForEveryPlayer)
                 DiscoveryQuests.Add(id);
@@ -155,7 +160,7 @@ namespace RobleysQuestingFramework
             if (discoverForEveryPlayer)
             {
                 foreach (long playerID in InventoryObservationService.GetAvailablePlayerIDs())
-                    manager.GetOrAddQuest(playerID, id, out _);
+                    NotifyAvailable(manager.GetOrAddQuest(playerID, id, out _), playerID);
             }
         }
 
@@ -180,7 +185,7 @@ namespace RobleysQuestingFramework
                 _data.Quests.Add(record);
             }
 
-            return _active.TryGetValue(record, out Quest quest) ? quest : Activate(record);
+            return _active.TryGetValue(record, out Quest quest) ? quest : Activate(record, created);
         }
 
         // One stable slot per managed quest instance. Reuse must have identical contents.
@@ -251,13 +256,30 @@ namespace RobleysQuestingFramework
             }
         }
 
-        Quest Activate(QuestRecord record)
+        Quest Activate(QuestRecord record, bool fresh = false)
         {
             long playerID = long.Parse(record.PlayerID, CultureInfo.InvariantCulture);
             Quest quest = Factories[record.QuestID](playerID, InventoryObservationService.ForPlayer(playerID));
             quest.InstanceKey = record.InstanceKey ?? "";
             quest.QuestGiverId = new ZDOID(record.GiverUser, record.GiverID);
-            quest.RestoreProgress(record.Progress);
+            try
+            {
+                if (record.State != null)
+                    quest.RestoreState(record.State.DeepClone());
+                else if (quest is DefinedQuest && !fresh)
+                    throw new InvalidDataException("Missing declarative state; automatic migration from legacy records is unsupported.");
+                else
+                    quest.RestoreProgress(record.Progress);
+                if (quest is DefinedQuest defined)
+                    defined.ValidateRestoredStage((QuestStage)record.Stage);
+            }
+            catch (Exception ex) when ((record.State != null || quest is DefinedQuest) &&
+                (ex is InvalidDataException || ex is ArgumentException || ex is InvalidCastException || ex is OverflowException || ex is FormatException || ex is JsonException))
+            {
+                Jotunn.Logger.LogWarning("Quest " + record.QuestID + " character " + record.PlayerID + " instance " + record.InstanceKey +
+                    " was not activated; saved payload retained. " + ex.Message);
+                return null;
+            }
             quest.RestoreStage((QuestStage)record.Stage);
             quest.RestoreJournalDismissed(record.JournalDismissed);
             _active.Add(record, quest);
@@ -295,16 +317,14 @@ namespace RobleysQuestingFramework
                 Directory.CreateDirectory(DataLoadPath);
                 foreach (KeyValuePair<QuestRecord, Quest> entry in _active)
                 {
-                    entry.Key.JournalDismissed = entry.Value.JournalDismissed;
-                    entry.Key.Stage = (int)entry.Value.Stage;
-                    entry.Key.Progress = entry.Value.SaveProgress();
-                    entry.Key.GiverUser = entry.Value.QuestGiverId.UserID;
-                    entry.Key.GiverID = entry.Value.QuestGiverId.ID;
+                    Snapshot(entry.Key, entry.Value);
                 }
 
+                if (_data.Quests.Exists(record => record.State != null))
+                    _data.Version = 2;
                 string json = JsonConvert.SerializeObject(_data, Formatting.Indented);
                 // Never replace the previous save if the serializer omits player records.
-                SaveData check = JsonConvert.DeserializeObject<SaveData>(json);
+                SaveData check = JsonConvert.DeserializeObject<SaveData>(json, SaveSettings);
                 if (check == null || check.Quests == null || check.Quests.Count != _data.Quests.Count || check.JournalDay != _data.JournalDay ||
                     JsonConvert.SerializeObject(check.Rewards) != JsonConvert.SerializeObject(_data.Rewards))
                     throw new InvalidDataException("Quest serialization omitted player records.");
@@ -314,10 +334,14 @@ namespace RobleysQuestingFramework
                     QuestRecord actual = check.Quests[i];
                     if (actual == null || actual.PlayerID != expected.PlayerID || actual.QuestID != expected.QuestID ||
                         actual.JournalDismissed != expected.JournalDismissed || actual.InstanceKey != expected.InstanceKey || actual.Stage != expected.Stage || actual.Progress != expected.Progress ||
-                        actual.GiverUser != expected.GiverUser || actual.GiverID != expected.GiverID)
-                        throw new InvalidDataException("Quest serialization changed player progress.");
+                        !JToken.DeepEquals(actual.State, expected.State) || actual.GiverUser != expected.GiverUser || actual.GiverID != expected.GiverID)
+                        throw new InvalidDataException("Quest serialization changed player progress: " + expected.QuestID);
                 }
 
+                // Preserve the last v1 file separately from the rotating backup on first upgrade.
+                if (_data.Version == 2 && File.Exists(_savePath) && !File.Exists(_savePath + ".v1.bak") &&
+                    (int?)JObject.Parse(File.ReadAllText(_savePath))["Version"] == 1)
+                    File.Copy(_savePath, _savePath + ".v1.bak");
                 string temporary = _savePath + ".tmp";
                 File.WriteAllText(temporary, json);
                 if (File.Exists(_savePath))
@@ -343,6 +367,10 @@ namespace RobleysQuestingFramework
             public bool JournalDismissed;
             public int Stage;
             public int Progress;
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+            public JToken State;
+            [JsonExtensionData]
+            public Dictionary<string, JToken> Extra = new Dictionary<string, JToken>();
             public long GiverUser;
             public uint GiverID;
         }
@@ -350,6 +378,8 @@ namespace RobleysQuestingFramework
         [Serializable]
         class SaveData
         {
+            [JsonExtensionData]
+            public Dictionary<string, JToken> Extra = new Dictionary<string, JToken>();
             public int Version = 1;
             public int? JournalDay;
             public string WorldID;

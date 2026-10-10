@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using Newtonsoft.Json.Linq;
 
 namespace RobleysQuestingFramework
 {
@@ -106,6 +108,15 @@ namespace RobleysQuestingFramework
         /// </summary>
         public virtual int SaveProgress() => 0;
 
+        public virtual JToken SaveState() => null;
+        public virtual void RestoreState(JToken state)
+        {
+            throw new InvalidDataException("This quest does not support structured state; restore its matching definition.");
+        }
+
+        // Declarative plans are validated/staged before terminal state; commit before public notifications.
+        protected virtual Action PrepareCompletion() => null;
+
         /// <summary>
         /// Restores quest-specific progress from the world save before listeners are attached.
         /// Override this to validate and apply the saved value; the default does nothing.
@@ -154,7 +165,8 @@ namespace RobleysQuestingFramework
                 return;
 
             Jotunn.Logger.LogInfo($"Completing Quest: {Name}");
-            SetStage(Stage | QuestStage.Completed);
+            Action commit = PrepareCompletion();
+            SetStage(Stage | QuestStage.Completed, commit);
             ActivateQuestCompletionEffects();
 
             if (MessageHud.instance)
@@ -229,7 +241,9 @@ namespace RobleysQuestingFramework
                 CompleteQuest();
         }
 
-        protected void SetStage(QuestStage next)
+        protected void SetStage(QuestStage next) => SetStage(next, null);
+
+        void SetStage(QuestStage next, Action beforeNotifications)
         {
             if (Stage == next)
                 return;
@@ -237,6 +251,7 @@ namespace RobleysQuestingFramework
             Jotunn.Logger.LogInfo($"{Name} set to next stage: {next}");
             QuestStage previous = Stage;
             Stage = next;
+            beforeNotifications?.Invoke();
             RefreshSubscriptions();
             StageChanged?.Invoke(previous, next);
             NotifyTrackingChanged();

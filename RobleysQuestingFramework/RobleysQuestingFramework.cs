@@ -31,6 +31,7 @@ namespace RobleysQuestingFramework
             // To learn more about Jotunn's features, go to
             // https://valheim-modding.github.io/Jotunn/tutorials/overview.html
 
+            BuiltInItemRewards.Initialize();
             QuestJournal.Initialize(Config);
             _harmony = new Harmony(PluginGUID);
             _harmony.PatchAll(typeof(QuestManager).Assembly);

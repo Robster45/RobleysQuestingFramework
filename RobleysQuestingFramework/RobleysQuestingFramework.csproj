@@ -90,7 +90,7 @@
     <Copy SourceFiles="$(VALHEIM_MANAGED)/SoftReferenceableAssets.dll" DestinationFolder="$(UNITY_FOLDER)/Assets/Assemblies" />
   </Target>
 
-  <Target Name="JotunnPostBuildTask" AfterTargets="Build">
+  <Target Name="JotunnPostBuildTask" AfterTargets="Build" Condition="'$(SkipPublish)' != 'true'">
     <CallTarget Targets="CopyToUnity" Condition="Exists('$(UNITY_FOLDER)')" />
   </Target>
 

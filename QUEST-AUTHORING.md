@@ -1,5 +1,7 @@
 # Writing a quest
 
+For personal kill/spawner quests with automatic acceptance and item rewards, start with [declarative authoring](DECLARATIVE-QUESTS.md). It includes a complete plugin and ordered five-Necks/one-nest example; the subclass API below remains supported.
+
 Write a quest class, not a quest-specific service. [`BoarRunestoneQuest.cs`](RobleysTestQuests/BoarRunestoneQuest.cs) is a complete NPC quest example: it contains its location trigger, spawn settings, dialogue, acceptance, resource requirements, attack/death cancellation, and taming reward. The shared services contain no boar quest IDs or item requirements.
 
 ## Registration

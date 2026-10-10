@@ -41,3 +41,7 @@ Quest IDs, boar world keys, and payment receipts are unchanged. Progress remains
 See [the boar guide](../BOAR-QUEST.md) for gameplay checks. The wood quest queues an owner-client payout: remove 10 wood and raise WoodCutting by 100 through `RaiseSkill`. If the character no longer has 10 wood, delivery remains pending until they do. Both plugins must be installed on the owning client. See [reward delivery](../QUEST-AUTHORING.md#owner-client-rewards) for retries and persistence limits.
 
 Debug builds deploy only this plugin DLL and symbols. Release builds produce a local installation ZIP; Thunderstore publication requires adding a manifest with the framework's published dependency identifier and an icon.
+
+## Declarative examples
+
+`DeclarativeExamples.Register()` is called from plugin Awake and its disposable handle is released in OnDestroy. It adds `test.defined.necks_then_nest` (personally kill five Necks, then destroy one nest, receive 50 Coins) and `test.defined.first_neck` (encounter a Neck, personally kill one, receive 5 Coins). Existing quest IDs and rewards are unchanged. See [declarative authoring and manual checks](../DECLARATIVE-QUESTS.md).

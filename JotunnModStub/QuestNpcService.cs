@@ -308,6 +308,16 @@ namespace RobleysQuestingFramework
             [HarmonyPostfix]
             static void Postfix(Character a, Character b, ref bool __result)
             {
+                // Melee, area attacks, and projectiles also use IsEnemy to filter hits.
+                // Let players hit NPCs that become hostile when attacked, so RPC_Damage
+                // can record betrayal. The reverse direction still keeps the NPC peaceful.
+                if (a is Player)
+                {
+                    ZDO targetData = Data(b);
+                    QuestNpcDefinition targetDefinition = Definition(targetData);
+                    if (Available(targetData, targetDefinition) && targetDefinition.HostileWhenAttacked)
+                        return;
+                }
                 if (IsFriendly(a) || IsFriendly(b))
                     __result = false;
             }

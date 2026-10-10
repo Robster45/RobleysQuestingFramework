@@ -40,6 +40,9 @@ namespace RobleysQuestingFramework
 
         public ZDOID QuestGiverId = ZDOID.None;
 
+        // Override for interaction-driven quests whose giver has no persistent ZDO (for example traders).
+        protected virtual bool RequiresInteraction => QuestGiverId != ZDOID.None;
+
         [NonSerialized]
         List<SubscriptionRule> _subscriptions;
 
@@ -127,7 +130,7 @@ namespace RobleysQuestingFramework
             Jotunn.Logger.LogInfo($"Discovered Quest: {Name}");
             SetStage(Stage | QuestStage.Discovered);
 
-            if (QuestGiverId == ZDOID.None)
+            if (!RequiresInteraction)
                 StartQuest();
         }
 
@@ -222,7 +225,7 @@ namespace RobleysQuestingFramework
                 ? Stage | QuestStage.CriteriaMet
                 : Stage & ~QuestStage.CriteriaMet);
 
-            if (met && QuestGiverId == ZDOID.None)
+            if (met && !RequiresInteraction)
                 CompleteQuest();
         }
 

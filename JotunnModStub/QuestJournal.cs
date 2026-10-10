@@ -24,7 +24,7 @@ namespace RobleysQuestingFramework
         static GameObject Panel;
         static Text Body;
         static Player LocalPlayer;
-        static bool Visible, LayoutDirty;
+        static bool Visible, LayoutDirty, InitialOpenPending;
         static string Snapshot = "Loading quests...";
         static readonly Vector3[] Corners = new Vector3[4];
 
@@ -64,12 +64,26 @@ namespace RobleysQuestingFramework
                 
                 Visible = false;
                 LocalPlayer = Player.m_localPlayer;
+                InitialOpenPending = LocalPlayer;
                 Snapshot = "Loading quests...";
                 
                 if (Panel) 
                     Panel.SetActive(false);
             }
             
+            // Wait for the character and networking before requesting the initial snapshot.
+            if (InitialOpenPending && LocalPlayer && LocalPlayer.GetPlayerID() != 0 &&
+                ZNet.instance && ZRoutedRpc.instance != null)
+            {
+                InitialOpenPending = false;
+                Visible = true;
+                EnsurePanel();
+                LayoutDirty = true;
+                if (Panel)
+                    Panel.SetActive(true);
+                SetSubscription(true);
+            }
+
             if (LocalPlayer && ZNet.instance && ZRoutedRpc.instance != null &&
                 !Console.IsVisible() && !(Chat.instance && Chat.instance.HasFocus()) &&
                 !TextInput.IsVisible() && !Menu.IsVisible() && !InventoryGui.IsVisible() &&
@@ -190,8 +204,9 @@ namespace RobleysQuestingFramework
 
         static void EnsurePanel()
         {
-            if (Panel || GUIManager.IsHeadless() || !GUIManager.CustomGUIFront) return;
-            Panel = GUIManager.Instance.CreateWoodpanel(GUIManager.CustomGUIFront.transform,
+            if (Panel || GUIManager.IsHeadless() || !GUIManager.CustomGUIBack) return;
+            // Keep inventory panels and other vanilla menus in front of this HUD.
+            Panel = GUIManager.Instance.CreateWoodpanel(GUIManager.CustomGUIBack.transform,
                 Vector2.one, Vector2.one, Vector2.zero, Width.Value, 100, false);
             Panel.name = "RQF_QuestJournal";
             Panel.GetComponent<RectTransform>().pivot = Vector2.one;
@@ -277,6 +292,7 @@ namespace RobleysQuestingFramework
             DirtyPlayers.Clear();
             Visible = false;
             LocalPlayer = null;
+            InitialOpenPending = false;
             Snapshot = "Loading quests...";
             if (Panel) 
                 Panel.SetActive(false);

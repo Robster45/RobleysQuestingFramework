@@ -59,7 +59,7 @@ If this is the case, the references to the assembly files must be renewed in Vis
 
 ## Quest journal
 
-Press **J** in-game to toggle the read-only journal. It starts hidden and is positioned 12 UI units below the minimap, aligned to its right edge. It does not capture the mouse or block movement. The shortcut is ignored while chat, console, text entry, inventory, or the menu is open.
+Press **J** in-game to toggle the read-only journal. It starts visible and is positioned 12 UI units below the minimap, aligned to its right edge. It does not capture the mouse or block movement. The shortcut is ignored while chat, console, text entry, inventory, or the menu is open.
 
 The `[Journal]` section in `BepInEx/config/com.jotunn.robleysquestingframework.cfg` is generated on the first launch:
 
@@ -80,4 +80,4 @@ Clients request a fresh server snapshot when opening the journal. While visible,
 
 Quest authors can override `Quest.JournalProgress` and call the protected `NotifyTrackingChanged()` after changing custom progress. Stage changes notify automatically. Kill and resource quests provide progress text and notifications out of the box. Hidden quests and other players' quests are excluded by the server.
 
-Manual verification: open with J, advance a resource/kill quest and check its count; close, advance again, and reopen to confirm the latest count. Repeat with a remote client and verify another player's progress is absent. Check positioning at your HUD scale, change the layout settings, and reconnect to verify that the journal starts hidden.
+Manual verification: enter a world and confirm the journal opens automatically, advance a resource/kill quest and check its count; close, advance again, and reopen to confirm the latest count. Repeat with a remote client and verify another player's progress is absent. Check positioning at your HUD scale, change the layout settings, and reconnect to verify that the journal starts visible.

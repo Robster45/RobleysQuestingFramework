@@ -1,6 +1,30 @@
 # RobleysTestQuests
 
-Optional development plugin containing Gather 10 wood, Kill 5 necks, A boar's trust, and Hildir's Favor. Requires RobleysQuestingFramework and Jotunn.
+Optional development plugin containing Gather 10 wood, Kill 5 necks, A boar's trust, Revenge, Clear the greydwarf nests, Clear burial chambers, and Hildir's Favor. Requires RobleysQuestingFramework and Jotunn.
+
+## Clear burial chambers
+
+Entering a burial chamber automatically starts a quest for that specific chamber. Each player receives at most one attempt per chamber, identified by its persistent dungeon ZDO; re-entering or reconnecting resumes the existing quest. The journal title includes coordinates to distinguish chambers. Other dungeon types do not trigger this quest.
+
+Clear all hostile creatures and active spawners, including evil bone piles. Untriggered creature spawners in unexplored rooms block completion until their defenders spawn and are dealt with. The complete dungeon must be loaded, and three consecutive empty observations are required. Outdoor enemies and neighbouring dungeons do not count. Leaving or dying retains the quest; return to finish it. Other players may help, and a first visit to an already-cleared chamber qualifies once the empty-state checks pass.
+
+Completion automatically grants **50 coins** through the persistent reward outbox. Full inventories receive the remainder as a ground drop. Every chamber has its own reward receipt; a completed chamber does not pay again on later entry.
+
+Quest ID: `test.clear_burial_chambers`. The quest derives from the framework's `ClearQuest`; dungeon observation and networking remain in the framework. See [authoring and in-game checks](../CLEAR-QUESTS.md).
+
+## Clear the greydwarf nests
+
+Find a greydwarf nest by approaching within 30 metres. The quest automatically discovers and starts, then tracks three nests personally destroyed, including the first one. Destroying a nest at range before the discovery poll also starts the quest and counts that nest. Other spawners, greydwarf creature kills, and other players' destruction do not count. Progress survives world saves and reconnects.
+
+The third nest automatically completes the quest and queues one full-durability **quality 6 bronze axe**. The reward goes into the player's inventory, or drops beside them if it is full. It uses the existing persistent reward outbox and receipt system. The item's quality is set explicitly, without changing the bronze axe prefab or its crafting upgrade limit.
+
+Quest ID: `test.clear_3_greydwarf_nests`. The concrete quest is in `GreydwarfNestsQuest.cs`, deriving from the reusable `DestroySpawnersQuest`; generic discovery/destruction observations remain in the framework's `SpawnerObservationService`. Existing IDs, saved counts and reward receipts are unchanged. Prefabs are `Spawner_GreydwarfNest` and `AxeBronze`, verified against the [Jötunn prefab list](https://valheim-modding.github.io/Jotunn/data/prefabs/prefab-list.html) and [item list](https://valheim-modding.github.io/Jotunn/data/objects/item-list.html).
+
+In-game checks on both host and remote client: approach the first nest and verify discovery at 0/3; destroy it and verify 1/3; save/restart and verify progress; destroy two more and verify exactly one quality 6 bronze axe at full durability. Repeat with a full inventory, pick up the dropped reward, and save/reconnect to check retained quality. Confirm unrelated spawners, creature kills, and another player's nest destruction do not advance your quest. Check a first ranged destruction starts at 1/3, and that later nests or reconnecting after completion do not repeat the reward. The automated harness checks quest/reward logic with fake game boundaries; real RPCs and Harmony hooks require these in-game checks.
+
+## Revenge
+
+The automatic Revenge quest starts when an enemy kills a player, promotes that enemy by one star, and ends when the player kills that exact enemy or dies again. Its quest rules and registration live in this plugin; the framework provides death events, network transport and promotion handling. See [Explore and revenge quests](../EXPLORE-REVENGE-QUESTS.md) for details and verification steps.
 
 ## Hildir's Favor
 

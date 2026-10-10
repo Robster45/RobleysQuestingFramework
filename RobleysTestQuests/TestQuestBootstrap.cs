@@ -9,6 +9,11 @@ namespace RobleysTestQuests
 
         public static void Register()
         {
+            RevengeQuest.Register();
+            ClearBurialChambersQuest.Register();
+            QuestRewardService.Register(GreydwarfNestsQuest.RewardHandler, GreydwarfNestsQuest.ApplyReward);
+            QuestManager.RegisterQuest(GreydwarfNestsQuest.ID, (playerID, inventory) => new GreydwarfNestsQuest(playerID),
+                discoverForEveryPlayer: true);
             QuestRewardService.Register(HildirsFavorQuest.RewardHandler, HildirsFavorQuest.ApplyReward);
             QuestManager.RegisterQuest(HildirsFavorQuest.ID, (playerID, inventory) => new HildirsFavorQuest(playerID),
                 discoverForEveryPlayer: true);
@@ -20,6 +25,9 @@ namespace RobleysTestQuests
 
         public static void Unregister()
         {
+            RevengeQuest.Unregister();
+            ClearBurialChambersQuest.Unregister();
+            QuestRewardService.Unregister(GreydwarfNestsQuest.RewardHandler);
             QuestRewardService.Unregister(HildirsFavorQuest.RewardHandler);
             InventoryObservationService.PlayerAvailable -= LoadTestQuests;
             QuestRewardService.Unregister(TestQuest_10Wood.RewardHandler);

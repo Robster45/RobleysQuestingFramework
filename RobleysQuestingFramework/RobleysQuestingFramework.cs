@@ -39,6 +39,7 @@ namespace RobleysQuestingFramework
         void Update()
         {
             InventoryObservationService.Tick();
+            QuestRewardService.Tick();
             QuestNpcService.Tick();
             QuestJournal.Tick();
         }

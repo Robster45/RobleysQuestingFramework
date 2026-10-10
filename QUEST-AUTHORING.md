@@ -74,3 +74,28 @@ The manager saves player/quest identity, stage flags, progress, and the exact `Q
 The refactor preserves the boar's existing quest ID, legacy world flags, runestone encounter keys, and payment receipt IDs. `QuestNpcDefinition` allows legacy marker/tamed/attacked keys so this migration logic stays with the quest definition. Existing accepted quests resume with their saved giver. New quests become discovered on encountering their runestone, and start only when the player interacts.
 
 Character, quest JSON, and world saves are independent. They support normal save/reload, but hard crashes or rolling back only one save are not atomic. Unity spawning, actual RPC delivery, and owner transfer still require in-game testing.
+
+
+## Owner-client rewards
+
+Completion effects execute on the server. For character-owned effects, register a namespaced handler on every client during plugin initialization, and queue a named reward slot from `ActivateQuestCompletionEffects`:
+
+```csharp
+QuestRewardService.Register("my.mod.skill-v1", (player, payload) =>
+{
+    player.RaiseSkill(Skills.SkillType.WoodCutting, 100);
+    return true;
+});
+// In the managed quest's completion hook:
+QuestManager.WorldInstance.QueueReward(this, "completion-skill-v1", "my.mod.skill-v1");
+```
+
+Unregister the handler during plugin teardown. The optional string payload is limited to 8192 characters; handler and slot IDs are limited to 128 characters. Validate payloads and prerequisites before applying effects. Return `false` only if no effects were applied. A throwing or partially successful handler can repeat partial effects on retry; handlers must prevent that themselves.
+
+The stable SHA-256 delivery ID includes world ID, character ID, registered quest ID, instance key, and reward slot. Requeuing identical contents is a no-op, including after acknowledgement. Reusing a slot with different contents throws. Use distinct instance keys for repeatable quests. Acknowledged records remain as tombstones in the world's quest JSON.
+
+Enqueue saves quest completion and the outbox together before delivery. Pending rewards retry every five seconds while the character is connected and alive, including after a server restart. Failed saves withhold delivery until persistence succeeds. Missing client handlers leave rewards pending. Only the server can send accepted deliveries; the receiver checks the intended character, and the server accepts acknowledgements only from that character's peer. This trusts the character-owning client, like inventory observations; it is not anti-cheat verification.
+
+Successful handlers write a receipt in `Player.m_customData`. Duplicate deliveries replay the acknowledgement without applying effects, even if the handler was subsequently removed. Receipts persist with ordinary character saves. This is retry deduplication, **not crash-atomic exactly-once delivery**: a client crash or character rollback after acknowledgement but before saving can lose a reward, and an exception between effects and receipt creation can repeat effects. Completion hooks are not replayed on load, so previously completed quests without outbox entries are not retroactively paid. Queuing multiple slots is not a single transaction across the entire completion hook.
+
+Manual multiplayer check (host and dedicated server): install both plugins on server and clients, complete the wood quest remotely, and verify only the intended character loses 10 wood and gains skill progress. Disconnect before delivery, restart the server, reconnect, and verify the pending entry delivers. Suppress an acknowledgement in a development build and verify repeated packets only replay receipts. Save/reload the character and world and verify acknowledged entries do not pay again. Repeat with two characters; inspect `Rewards` in the world's quest JSON for pending and acknowledged records.

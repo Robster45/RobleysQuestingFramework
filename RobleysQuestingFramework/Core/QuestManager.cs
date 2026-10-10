@@ -31,6 +31,7 @@ namespace RobleysQuestingFramework
         readonly List<Quest> _worldRestorePending = new List<Quest>();
 
         readonly SaveData _data;
+        bool _rewardsDirty;
 
         readonly string _savePath;
 
@@ -93,6 +94,17 @@ namespace RobleysQuestingFramework
                     !keys.Add(parsedPlayerID.ToString(CultureInfo.InvariantCulture) + ":" + record.QuestID + ":" + (record.InstanceKey ?? "")))
                     throw new InvalidDataException("Invalid quest record in " + _savePath);
                 record.PlayerID = parsedPlayerID.ToString(CultureInfo.InvariantCulture);
+            }
+            if (_data.Rewards == null)
+                throw new InvalidDataException("Missing reward records.");
+            HashSet<string> rewardIDs = new HashSet<string>();
+            foreach (RewardDelivery reward in _data.Rewards)
+            {
+                if (reward == null || reward.ID == null || reward.ID.Length != 64 ||
+                    reward.PlayerID == 0 || string.IsNullOrWhiteSpace(reward.Handler) ||
+                    reward.Handler.Length > 128 || reward.Payload == null || reward.Payload.Length > 8192 ||
+                    !rewardIDs.Add(reward.ID))
+                    throw new InvalidDataException("Invalid reward record in " + _savePath);
             }
             // Validate the whole file before attaching any quest listeners.
             try
@@ -162,6 +174,55 @@ namespace RobleysQuestingFramework
             }
 
             return _active.TryGetValue(record, out Quest quest) ? quest : Activate(record);
+        }
+
+        // One stable slot per managed quest instance. Reuse must have identical contents.
+        public string QueueReward(Quest quest, string rewardID, string handler, string payload = "")
+        {
+            if (!ZNet.instance || !ZNet.instance.IsServer())
+                throw new InvalidOperationException("Only the server can queue rewards.");
+            if (quest == null || (quest.Stage & QuestStage.Completed) == 0 ||
+                string.IsNullOrWhiteSpace(rewardID) || rewardID.Length > 128 ||
+                string.IsNullOrWhiteSpace(handler) || handler.Length > 128 || payload == null || payload.Length > 8192)
+                throw new ArgumentException("Provide a completed quest, reward slot, handler and bounded payload.");
+            QuestRecord record = null;
+            foreach (KeyValuePair<QuestRecord, Quest> entry in _active)
+            {
+                if (ReferenceEquals(entry.Value, quest))
+                    record = entry.Key;
+            }
+            if (record == null)
+                throw new ArgumentException("Reward quest is not owned by this manager.");
+            string id = RewardDelivery.CreateID(_data.WorldID, quest.PlayerID, record.QuestID, record.InstanceKey, rewardID);
+            RewardDelivery existing = _data.Rewards.Find(r => r.ID == id);
+            if (existing != null)
+            {
+                if (existing.Handler != handler || existing.Payload != payload)
+                    throw new InvalidOperationException("A reward ID cannot be reused with different contents.");
+                return id;
+            }
+            _data.Rewards.Add(new RewardDelivery { ID = id, PlayerID = quest.PlayerID, Handler = handler, Payload = payload });
+            _rewardsDirty = true;
+            // Persist completion and its outbox entry together before allowing delivery.
+            Save();
+            return id;
+        }
+
+        public RewardDelivery[] GetPendingRewards()
+        {
+            if (_rewardsDirty)
+                Save();
+            return _rewardsDirty ? Array.Empty<RewardDelivery>() : _data.Rewards.FindAll(r => !r.Acknowledged).ToArray();
+        }
+
+        public void AcknowledgeReward(long playerID, string id)
+        {
+            RewardDelivery reward = _data.Rewards.Find(r => r.ID == id && r.PlayerID == playerID);
+            if (reward == null || reward.Acknowledged)
+                return;
+            reward.Acknowledged = true;
+            _rewardsDirty = true;
+            Save();
         }
 
         public static void Unload()
@@ -237,7 +298,8 @@ namespace RobleysQuestingFramework
                 string json = JsonConvert.SerializeObject(_data, Formatting.Indented);
                 // Never replace the previous save if the serializer omits player records.
                 SaveData check = JsonConvert.DeserializeObject<SaveData>(json);
-                if (check == null || check.Quests == null || check.Quests.Count != _data.Quests.Count || check.JournalDay != _data.JournalDay)
+                if (check == null || check.Quests == null || check.Quests.Count != _data.Quests.Count || check.JournalDay != _data.JournalDay ||
+                    JsonConvert.SerializeObject(check.Rewards) != JsonConvert.SerializeObject(_data.Rewards))
                     throw new InvalidDataException("Quest serialization omitted player records.");
                 for (int i = 0; i < _data.Quests.Count; i++)
                 {
@@ -256,6 +318,7 @@ namespace RobleysQuestingFramework
                 else
                     File.Move(temporary, _savePath);
 
+                _rewardsDirty = false;
                 Jotunn.Logger.LogInfo("Server quest data saved (" + _data.Quests.Count + " quest records): " + _savePath);
             }
             catch (Exception ex)
@@ -284,6 +347,7 @@ namespace RobleysQuestingFramework
             public int? JournalDay;
             public string WorldID;
             public List<QuestRecord> Quests = new List<QuestRecord>();
+            public List<RewardDelivery> Rewards = new List<RewardDelivery>();
         }
 
         [HarmonyPatch(typeof(ZNet), "Start")]

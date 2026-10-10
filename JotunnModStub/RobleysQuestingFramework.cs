@@ -16,7 +16,7 @@ namespace RobleysQuestingFramework
 
         public const string PluginVersion = "0.0.1";
 
-        
+
         // Use this class to add your own localization to the game
         // https://valheim-modding.github.io/Jotunn/tutorials/localization.html
         public static CustomLocalization Localization = LocalizationManager.Instance.GetLocalization();

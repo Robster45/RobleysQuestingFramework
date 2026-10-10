@@ -5,13 +5,13 @@ using HarmonyLib;
 namespace RobleysQuestingFramework
 {
     // Like inventory snapshots, kill reports are trusted observations from modded peers.
-    internal static class KillObservationService
+    public static class KillObservationService
     {
         const string KillRPC = "RobleysQuestingFramework.CreatureKilled";
         static readonly HashSet<ZDOID> Reported = new HashSet<ZDOID>();
-        internal static event Action<long, int> PlayerKilledCreature;
+        public static event Action<long, int> PlayerKilledCreature;
 
-        internal static void Reset() => Reported.Clear();
+        public static void Reset() => Reported.Clear();
 
         static void ReceiveKill(long sender, ZPackage package)
         {
@@ -21,7 +21,7 @@ namespace RobleysQuestingFramework
                 return;
             try
             {
-                var victim = package.ReadZDOID();
+                ZDOID victim = package.ReadZDOID();
                 long playerID = package.ReadLong();
                 int prefab = package.ReadInt();
                 if (victim == ZDOID.None || playerID == 0 || !Reported.Add(victim))
@@ -47,11 +47,11 @@ namespace RobleysQuestingFramework
                 if (!ZNet.instance || ZRoutedRpc.instance == null || __instance.IsPlayer() ||
                     !___m_nview || !___m_nview.IsValid() || !___m_nview.IsOwner())
                     return;
-                var killer = ___m_lastHit?.GetAttacker() as Player;
+                Player killer = ___m_lastHit?.GetAttacker() as Player;
                 if (!killer || killer.GetPlayerID() == 0)
                     return;
-                var victim = ___m_nview.GetZDO();
-                var package = new ZPackage();
+                ZDO victim = ___m_nview.GetZDO();
+                ZPackage package = new ZPackage();
                 package.Write(victim.m_uid);
                 package.Write(killer.GetPlayerID());
                 package.Write(victim.GetPrefab());
@@ -60,7 +60,8 @@ namespace RobleysQuestingFramework
                     package.SetPos(0);
                     ReceiveKill(ZNet.GetUID(), package);
                 }
-                else ZRoutedRpc.instance.InvokeRoutedRPC(ZRoutedRpc.instance.GetServerPeerID(), KillRPC, package);
+                else
+                    ZRoutedRpc.instance.InvokeRoutedRPC(ZRoutedRpc.instance.GetServerPeerID(), KillRPC, package);
             }
         }
     }

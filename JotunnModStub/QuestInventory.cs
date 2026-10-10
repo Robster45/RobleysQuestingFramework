@@ -9,7 +9,7 @@ namespace RobleysQuestingFramework
         readonly Action<bool> _trackingChanged;
         Action _changed;
         bool _notificationPending;
-        Dictionary<Tuple<string, int>, int> _counts = new Dictionary<Tuple<string, int>, int>();
+        Dictionary<InventoryItemKey, int> _counts = new Dictionary<InventoryItemKey, int>();
 
         public event Action Changed
         {
@@ -45,18 +45,18 @@ namespace RobleysQuestingFramework
         public long CountItems(string prefabID, int? quality = null)
         {
             if (quality.HasValue)
-                return _counts.TryGetValue(Tuple.Create(prefabID, quality.Value), out int count) ? count : 0;
+                return _counts.TryGetValue(new InventoryItemKey(prefabID, quality.Value), out int count) ? count : 0;
 
             long total = 0;
-            foreach (var entry in _counts)
+            foreach (KeyValuePair<InventoryItemKey, int> entry in _counts)
             {
-                if (entry.Key.Item1 == prefabID)
+                if (entry.Key.PrefabName == prefabID)
                     total += entry.Value;
             }
             return total;
         }
 
-        public void SetSnapshot(Dictionary<Tuple<string, int>, int> snapshot)
+        public void SetSnapshot(Dictionary<InventoryItemKey, int> snapshot)
         {
             _counts = snapshot;
             HasSnapshot = true;

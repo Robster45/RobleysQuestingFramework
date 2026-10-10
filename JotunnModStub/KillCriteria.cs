@@ -6,7 +6,7 @@ namespace RobleysQuestingFramework
     /// The creature prefab and number of kills required from the quest's owner.
     /// This immutable configuration can be shared; progress belongs to each quest.
     /// </summary>
-    public sealed class KillCriteria
+    public class KillCriteria
     {
         public string PrefabName { get; }
         public int Quantity { get; }

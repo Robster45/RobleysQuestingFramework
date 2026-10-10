@@ -11,8 +11,8 @@ namespace RobleysQuestingFramework
     {
         const string DiscoveryRPC = "RobleysQuestingFramework.CreatureDiscovered";
         const float ReportInterval = 5f;
-        static readonly Dictionary<Tuple<long, int>, float> NextReport =
-            new Dictionary<Tuple<long, int>, float>();
+        static readonly Dictionary<CreatureDiscoveryKey, float> NextReport =
+            new Dictionary<CreatureDiscoveryKey, float>();
 
         public static event Action<long, int> PlayerDiscoveredCreature;
 
@@ -25,18 +25,18 @@ namespace RobleysQuestingFramework
                 (!sensed && !creature.IsAlerted()))
                 return;
 
-            var player = creature.GetTargetCreature() as Player;
+            Player player = creature.GetTargetCreature() as Player;
             if (!player || player.IsDead() || player.GetPlayerID() == 0)
                 return;
 
-            var zdo = view.GetZDO();
-            var key = Tuple.Create(player.GetPlayerID(), zdo.GetPrefab());
+            ZDO zdo = view.GetZDO();
+            CreatureDiscoveryKey key = new CreatureDiscoveryKey(player.GetPlayerID(), zdo.GetPrefab());
             if (NextReport.TryGetValue(key, out float next) && Time.time < next)
                 return;
             // Retry during sustained encounters so loading/reconnecting cannot lose discovery.
             NextReport[key] = Time.time + ReportInterval;
 
-            var package = new ZPackage();
+            ZPackage package = new ZPackage();
             package.Write(zdo.m_uid);
             package.Write(player.GetPlayerID());
             if (ZNet.instance.IsServer())
@@ -57,9 +57,9 @@ namespace RobleysQuestingFramework
                 return;
             try
             {
-                var creatureID = package.ReadZDOID();
+                ZDOID creatureID = package.ReadZDOID();
                 long playerID = package.ReadLong();
-                var creature = ZDOMan.instance.GetZDO(creatureID);
+                ZDO creature = ZDOMan.instance.GetZDO(creatureID);
                 if (playerID == 0 || creature == null || creature.GetOwner() != sender)
                     return;
                 // As with inventory reports, trust observations from modded peers,

@@ -125,7 +125,7 @@ namespace RobleysQuestingFramework
 
         public void CompleteQuest()
         {
-            var required = QuestStage.Started | QuestStage.CriteriaMet;
+            QuestStage required = QuestStage.Started | QuestStage.CriteriaMet;
 
             if (IsFinished || (Stage & required) != required)
                 return;
@@ -211,7 +211,7 @@ namespace RobleysQuestingFramework
                 return;
 
             Jotunn.Logger.LogInfo($"{Name} set to next stage: {next}");
-            var previous = Stage;
+            QuestStage previous = Stage;
             Stage = next;
             RefreshSubscriptions();
             StageChanged?.Invoke(previous, next);
@@ -230,7 +230,7 @@ namespace RobleysQuestingFramework
                 return;
 
             // Detach obsolete listeners before attaching new ones.
-            foreach (var rule in _subscriptions)
+            foreach (SubscriptionRule rule in _subscriptions)
             {
                 if (rule.IsActive &&
                     (!_subscriptionsEnabled || !rule.ShouldBeActive(Stage)))
@@ -243,7 +243,7 @@ namespace RobleysQuestingFramework
             if (!_subscriptionsEnabled)
                 return;
 
-            foreach (var rule in _subscriptions)
+            foreach (SubscriptionRule rule in _subscriptions)
             {
                 if (!rule.IsActive && rule.ShouldBeActive(Stage))
                 {
@@ -253,7 +253,7 @@ namespace RobleysQuestingFramework
             }
         }
 
-        sealed class SubscriptionRule
+        class SubscriptionRule
         {
             public Func<QuestStage, bool> ShouldBeActive;
             public Action Subscribe;

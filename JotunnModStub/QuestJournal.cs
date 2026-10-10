@@ -52,25 +52,26 @@ namespace RobleysQuestingFramework
 
         static void QuestChanged(Quest quest)
         {
-            if (Viewers.ContainsValue(quest.PlayerID)) DirtyPlayers.Add(quest.PlayerID);
+            if (Viewers.ContainsValue(quest.PlayerID))
+                DirtyPlayers.Add(quest.PlayerID);
         }
 
         public static void Tick()
         {
             if (LocalPlayer != Player.m_localPlayer)
             {
-                if (Visible) 
+                if (Visible)
                     SetSubscription(false);
-                
+
                 Visible = false;
                 LocalPlayer = Player.m_localPlayer;
                 InitialOpenPending = LocalPlayer;
                 Snapshot = "Loading quests...";
-                
-                if (Panel) 
+
+                if (Panel)
                     Panel.SetActive(false);
             }
-            
+
             // Wait for the character and networking before requesting the initial snapshot.
             if (InitialOpenPending && LocalPlayer && LocalPlayer.GetPlayerID() != 0 &&
                 ZNet.instance && ZRoutedRpc.instance != null)
@@ -96,16 +97,16 @@ namespace RobleysQuestingFramework
                     EnsurePanel();
                     LayoutDirty = true;
                 }
-                
-                if (Panel) 
+
+                if (Panel)
                     Panel.SetActive(Visible);
-                
+
                 SetSubscription(Visible);
             }
 
             if (ZNet.instance && ZNet.instance.IsServer() && QuestManager.WorldInstance != null)
             {
-                foreach (var viewer in Viewers.ToArray())
+                foreach (KeyValuePair<long, long> viewer in Viewers.ToArray())
                 {
                     long playerID = ResolvePlayer(viewer.Key);
                     if (playerID == 0 || playerID != viewer.Value)
@@ -113,27 +114,28 @@ namespace RobleysQuestingFramework
                         Viewers.Remove(viewer.Key);
                         continue;
                     }
-                    if (!DirtyPlayers.Contains(playerID)) continue;
+                    if (!DirtyPlayers.Contains(playerID))
+                        continue;
                     string text = BuildSnapshot(playerID);
-                    if (viewer.Key == ZNet.GetUID()) 
+                    if (viewer.Key == ZNet.GetUID())
                         ReceiveSnapshot(viewer.Key, text);
-                    else 
+                    else
                         ZRoutedRpc.instance.InvokeRoutedRPC(viewer.Key, SnapshotRPC, text);
                 }
                 DirtyPlayers.Clear();
             }
-            
-            if (!Visible) 
+
+            if (!Visible)
                 return;
-            
+
             EnsurePanel();
-            
-            if (!Panel) 
+
+            if (!Panel)
                 return;
-            
-            if (LayoutDirty) 
+
+            if (LayoutDirty)
                 Refresh();
-            
+
             Position();
         }
 
@@ -146,39 +148,41 @@ namespace RobleysQuestingFramework
 
         static void SetSubscription(bool enabled)
         {
-            if (!ZNet.instance || ZRoutedRpc.instance == null) 
+            if (!ZNet.instance || ZRoutedRpc.instance == null)
                 return;
 
-            if (ZNet.instance.IsServer()) 
+            if (ZNet.instance.IsServer())
                 ReceiveVisibility(ZNet.GetUID(), enabled);
-            else 
+            else
                 ZRoutedRpc.instance.InvokeRoutedRPC(ZRoutedRpc.instance.GetServerPeerID(), VisibilityRPC, enabled);
         }
 
         static void ReceiveVisibility(long sender, bool enabled)
         {
-            if (!ZNet.instance || !ZNet.instance.IsServer()) 
+            if (!ZNet.instance || !ZNet.instance.IsServer())
                 return;
-            
-            if (!enabled) 
-            { 
-                Viewers.Remove(sender); 
-                return; 
+
+            if (!enabled)
+            {
+                Viewers.Remove(sender);
+                return;
             }
-            
+
             long id = ResolvePlayer(sender);
-            if (id == 0) 
+            if (id == 0)
                 return;
-            
+
             Viewers[sender] = id;
             DirtyPlayers.Add(id);
         }
 
         static void ReceiveSnapshot(long sender, string text)
         {
-            if (!Visible || !ZNet.instance || ZRoutedRpc.instance == null) return;
+            if (!Visible || !ZNet.instance || ZRoutedRpc.instance == null)
+                return;
             long server = ZNet.instance.IsServer() ? ZNet.GetUID() : ZRoutedRpc.instance.GetServerPeerID();
-            if (sender != server) return;
+            if (sender != server)
+                return;
             Snapshot = text;
             LayoutDirty = true;
         }
@@ -186,8 +190,8 @@ namespace RobleysQuestingFramework
         static string BuildSnapshot(long playerID)
         {
             // Prefix each entry with a status marker so filtering stays client-local.
-            var entries = new List<string>();
-            foreach (var quest in QuestManager.WorldInstance.GetPlayerQuests(playerID).OrderBy(q => q.Name))
+            List<string> entries = new List<string>();
+            foreach (Quest quest in QuestManager.WorldInstance.GetPlayerQuests(playerID).OrderBy(q => q.Name))
             {
                 if ((quest.Stage & QuestStage.Completed) != 0)
                     continue;
@@ -204,13 +208,14 @@ namespace RobleysQuestingFramework
 
         static void EnsurePanel()
         {
-            if (Panel || GUIManager.IsHeadless() || !GUIManager.CustomGUIBack) return;
+            if (Panel || GUIManager.IsHeadless() || !GUIManager.CustomGUIBack)
+                return;
             // Keep inventory panels and other vanilla menus in front of this HUD.
             Panel = GUIManager.Instance.CreateWoodpanel(GUIManager.CustomGUIBack.transform,
                 Vector2.one, Vector2.one, Vector2.zero, Width.Value, 100, false);
             Panel.name = "RQF_QuestJournal";
             Panel.GetComponent<RectTransform>().pivot = Vector2.one;
-            var obj = GUIManager.Instance.CreateText("", Panel.transform, new Vector2(0, 1), new Vector2(0, 1),
+            GameObject obj = GUIManager.Instance.CreateText("", Panel.transform, new Vector2(0, 1), new Vector2(0, 1),
                 new Vector2(12, -12), GUIManager.Instance.AveriaSerifBold, FontSize.Value,
                 GUIManager.Instance.ValheimBeige, true, Color.black, Width.Value - 24, 100, false);
             Body = obj.GetComponent<Text>();
@@ -219,30 +224,30 @@ namespace RobleysQuestingFramework
             Body.supportRichText = false;
             Body.horizontalOverflow = HorizontalWrapMode.Wrap;
             Body.verticalOverflow = VerticalWrapMode.Overflow;
-            foreach (var graphic in Panel.GetComponentsInChildren<Graphic>()) 
+            foreach (Graphic graphic in Panel.GetComponentsInChildren<Graphic>())
                 graphic.raycastTarget = false;
-            
+
             Panel.SetActive(Visible);
             LayoutDirty = true;
         }
 
         static void Refresh()
         {
-            var text = new StringBuilder("Quest journal\n");
+            StringBuilder text = new StringBuilder("Quest journal\n");
             int count = 0;
-            if (Snapshot == "Loading quests...") 
+            if (Snapshot == "Loading quests...")
                 text.Append("\nLoading quests...");
             else
             {
                 foreach (string entry in Snapshot.Split('\u001e'))
                 {
-                    if (entry.Length == 0 || (entry[0] == 'F' && !ShowCancelled.Value)) 
+                    if (entry.Length == 0 || (entry[0] == 'F' && !ShowCancelled.Value))
                         continue;
-                    
+
                     text.Append("\n").Append(entry.Substring(1)).Append("\n");
                     count++;
                 }
-                if (count == 0) 
+                if (count == 0)
                     text.Append("\nNo quests to show.");
             }
             Body.fontSize = FontSize.Value;
@@ -251,7 +256,7 @@ namespace RobleysQuestingFramework
             float height = Body.preferredHeight;
             Body.rectTransform.sizeDelta = new Vector2(Width.Value - 24, height);
             Panel.GetComponent<RectTransform>().sizeDelta = new Vector2(Width.Value, height + 24);
-            foreach (var graphic in Panel.GetComponentsInChildren<Image>())
+            foreach (Image graphic in Panel.GetComponentsInChildren<Image>())
             {
                 Color color = graphic.color;
                 color.a = Opacity.Value;
@@ -262,27 +267,27 @@ namespace RobleysQuestingFramework
 
         static void Position()
         {
-            var rect = Panel.GetComponent<RectTransform>();
-            var parent = (RectTransform)rect.parent;
+            RectTransform rect = Panel.GetComponent<RectTransform>();
+            RectTransform parent = (RectTransform)rect.parent;
             if (Minimap.instance && Minimap.instance.m_smallRoot)
             {
-                var map = Minimap.instance.m_smallRoot.GetComponent<RectTransform>();
+                RectTransform map = Minimap.instance.m_smallRoot.GetComponent<RectTransform>();
                 map.GetWorldCorners(Corners);
                 Vector3 bottomRight = parent.InverseTransformPoint(Corners[3]);
                 rect.localPosition = new Vector3(bottomRight.x + OffsetX.Value, bottomRight.y - Gap.Value + OffsetY.Value, 0);
             }
-            else 
+            else
                 rect.anchoredPosition = new Vector2(-30 + OffsetX.Value, -240 - Gap.Value + OffsetY.Value);
         }
 
         static void Recreate()
         {
-            if (Panel) 
+            if (Panel)
                 UnityEngine.Object.Destroy(Panel);
-            
+
             Panel = null;
             Body = null;
-            if (Visible) 
+            if (Visible)
                 EnsurePanel();
         }
 
@@ -294,7 +299,7 @@ namespace RobleysQuestingFramework
             LocalPlayer = null;
             InitialOpenPending = false;
             Snapshot = "Loading quests...";
-            if (Panel) 
+            if (Panel)
                 Panel.SetActive(false);
         }
 
@@ -305,7 +310,7 @@ namespace RobleysQuestingFramework
             Quest.TrackingChanged -= QuestChanged;
             GUIManager.OnCustomGUIAvailable -= Recreate;
             Reset();
-            if (Panel) 
+            if (Panel)
                 UnityEngine.Object.Destroy(Panel);
         }
 

@@ -26,7 +26,7 @@ namespace RobleysQuestingFramework
 
         public IEnumerable<Quest> GetPlayerQuests(long playerID)
         {
-            foreach (var quest in _active.Values)
+            foreach (Quest quest in _active.Values)
             {
                 if (quest.PlayerID == playerID && quest.Stage != QuestStage.Hidden)
                     yield return quest;
@@ -43,8 +43,8 @@ namespace RobleysQuestingFramework
                 throw new InvalidDataException("Invalid or unsupported quest save: " + _savePath);
             if (File.Exists(_savePath) && _data.Quests.Count == 0)
                 Jotunn.Logger.LogWarning("Quest save contains no player quest records; previously omitted progress cannot be restored: " + _savePath);
-            var keys = new HashSet<string>();
-            foreach (var record in _data.Quests)
+            HashSet<string> keys = new HashSet<string>();
+            foreach (QuestRecord record in _data.Quests)
             {
                 if (record == null || !long.TryParse(record.PlayerID, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsedPlayerID) || parsedPlayerID == 0 ||
                     string.IsNullOrEmpty(record.QuestID) || record.Stage < 0 || (record.Stage & ~31) != 0 ||
@@ -55,7 +55,7 @@ namespace RobleysQuestingFramework
             // Validate the whole file before attaching any quest listeners.
             try
             {
-                foreach (var record in _data.Quests)
+                foreach (QuestRecord record in _data.Quests)
                 {
                     // Retain records for unavailable quest definitions without discarding them.
                     if (Factories.ContainsKey(record.QuestID))
@@ -64,9 +64,9 @@ namespace RobleysQuestingFramework
             }
             catch
             {
-                foreach (var quest in _active.Values) 
+                foreach (Quest quest in _active.Values)
                     quest.Unsubscribe();
-                
+
                 throw;
             }
             Jotunn.Logger.LogInfo("Server quest data loaded: " + _savePath);
@@ -84,7 +84,7 @@ namespace RobleysQuestingFramework
             if (manager == null)
                 return;
 
-            foreach (var record in manager._data.Quests)
+            foreach (QuestRecord record in manager._data.Quests)
             {
                 if (record.QuestID == id && !manager._active.ContainsKey(record))
                     manager.Activate(record);
@@ -95,37 +95,37 @@ namespace RobleysQuestingFramework
         {
             if (playerID == 0)
                 throw new ArgumentException("A quest needs a valid character ID.", nameof(playerID));
-            
+
             string id = playerID.ToString(CultureInfo.InvariantCulture);
-            var record = _data.Quests.Find(q => q.PlayerID == id && q.QuestID == questID);
+            QuestRecord record = _data.Quests.Find(q => q.PlayerID == id && q.QuestID == questID);
             created = record == null;
             if (created)
             {
                 if (!Factories.ContainsKey(questID))
                     throw new ArgumentException("Unknown quest: " + questID);
-                
+
                 record = new QuestRecord { PlayerID = id, QuestID = questID };
                 _data.Quests.Add(record);
             }
-            
-            return _active.TryGetValue(record, out var quest) ? quest : Activate(record);
+
+            return _active.TryGetValue(record, out Quest quest) ? quest : Activate(record);
         }
 
         public static void Unload()
         {
-            var manager = WorldInstance;
+            QuestManager manager = WorldInstance;
             if (manager == null)
                 return;
-            
-            try 
-            { 
+
+            try
+            {
                 manager.Save();
             }
             finally
             {
-                foreach (var quest in manager._active.Values) 
+                foreach (Quest quest in manager._active.Values)
                     quest.Unsubscribe();
-                
+
                 WorldInstance = null;
             }
         }
@@ -156,11 +156,11 @@ namespace RobleysQuestingFramework
         {
             if (!ZNet.instance || !ZNet.instance.IsServer())
                 return;
-            
+
             try
             {
                 Directory.CreateDirectory(DataLoadPath);
-                foreach (var entry in _active)
+                foreach (KeyValuePair<QuestRecord, Quest> entry in _active)
                 {
                     entry.Key.Stage = (int)entry.Value.Stage;
                     entry.Key.Progress = entry.Value.SaveProgress();
@@ -168,15 +168,16 @@ namespace RobleysQuestingFramework
                 
                 string json = JsonConvert.SerializeObject(_data, Formatting.Indented);
                 // Never replace the previous save if the serializer omits player records.
-                var check = JsonConvert.DeserializeObject<SaveData>(json);
+                SaveData check = JsonConvert.DeserializeObject<SaveData>(json);
                 if (check == null || check.Quests == null || check.Quests.Count != _data.Quests.Count)
                     throw new InvalidDataException("Quest serialization omitted player records.");
                 for (int i = 0; i < _data.Quests.Count; i++)
                 {
-                    var expected = _data.Quests[i];
-                    var actual = check.Quests[i];
+                    QuestRecord expected = _data.Quests[i];
+                    QuestRecord actual = check.Quests[i];
                     if (actual == null || actual.PlayerID != expected.PlayerID || actual.QuestID != expected.QuestID ||
-                        actual.Stage != expected.Stage || actual.Progress != expected.Progress)
+                        actual.Stage != expected.Stage || actual.Progress != expected.Progress ||
+                        actual.GiverUser != expected.GiverUser || actual.GiverID != expected.GiverID)
                         throw new InvalidDataException("Quest serialization changed player progress.");
                 }
 
@@ -186,12 +187,12 @@ namespace RobleysQuestingFramework
                     File.Replace(temporary, _savePath, _savePath + ".bak");
                 else
                     File.Move(temporary, _savePath);
-                
+
                 Jotunn.Logger.LogInfo("Server quest data saved (" + _data.Quests.Count + " quest records): " + _savePath);
             }
-            catch (Exception ex) 
-            { 
-                Jotunn.Logger.LogError("Quest save failed: " + ex); 
+            catch (Exception ex)
+            {
+                Jotunn.Logger.LogError("Quest save failed: " + ex);
             }
         }
 

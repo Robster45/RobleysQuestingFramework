@@ -15,13 +15,13 @@ namespace RobleysQuestingFramework
         {
             get
             {
-                if (_journalCounts == null) 
+                if (_journalCounts == null)
                     return "Waiting for inventory...";
-                
-                var lines = new List<string>();
+
+                List<string> lines = new List<string>();
                 for (int i = 0; i < Criteria.Count; i++)
                 {
-                    var requirement = Criteria[i];
+                    ResourceCollectionCriteria requirement = Criteria[i];
                     string quality = requirement.Quality.HasValue ? $" (quality {requirement.Quality})" : "";
                     lines.Add($"{requirement.PrefabName}{quality}: {_journalCounts[i]}/{requirement.Quantity}");
                 }
@@ -47,8 +47,8 @@ namespace RobleysQuestingFramework
             if (criteria.Length == 0)
                 throw new ArgumentException("Configure at least one resource requirement.", nameof(criteria));
 
-            var requirements = new List<ResourceCollectionCriteria>();
-            foreach (var requirement in criteria)
+            List<ResourceCollectionCriteria> requirements = new List<ResourceCollectionCriteria>();
+            foreach (ResourceCollectionCriteria requirement in criteria)
             {
                 if (requirement == null)
                     throw new ArgumentException("Resource requirements cannot be null.", nameof(criteria));
@@ -93,28 +93,28 @@ namespace RobleysQuestingFramework
         {
             // Exact-quality requirements reserve those items. The total requirement
             // also includes any-quality entries, which must use the remaining items.
-            var totalRequired = new Dictionary<string, long>();
-            var qualityRequired = new Dictionary<Tuple<string, int>, long>();
-            foreach (var requirement in Criteria)
+            Dictionary<string, long> totalRequired = new Dictionary<string, long>();
+            Dictionary<InventoryItemKey, long> qualityRequired = new Dictionary<InventoryItemKey, long>();
+            foreach (ResourceCollectionCriteria requirement in Criteria)
             {
                 totalRequired.TryGetValue(requirement.PrefabName, out long total);
                 totalRequired[requirement.PrefabName] = total + requirement.Quantity;
 
                 if (requirement.Quality.HasValue)
                 {
-                    var key = Tuple.Create(requirement.PrefabName, requirement.Quality.Value);
+                    InventoryItemKey key = new InventoryItemKey(requirement.PrefabName, requirement.Quality.Value);
                     qualityRequired.TryGetValue(key, out long quantity);
                     qualityRequired[key] = quantity + requirement.Quantity;
                 }
             }
 
-            foreach (var requirement in qualityRequired)
+            foreach (KeyValuePair<InventoryItemKey, long> requirement in qualityRequired)
             {
-                if (_inventory.CountItems(requirement.Key.Item1, requirement.Key.Item2) < requirement.Value)
+                if (_inventory.CountItems(requirement.Key.PrefabName, requirement.Key.Quality) < requirement.Value)
                     return false;
             }
 
-            foreach (var requirement in totalRequired)
+            foreach (KeyValuePair<string, long> requirement in totalRequired)
             {
                 if (_inventory.CountItems(requirement.Key) < requirement.Value)
                     return false;

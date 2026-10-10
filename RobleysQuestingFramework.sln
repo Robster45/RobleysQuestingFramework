@@ -5,6 +5,8 @@ VisualStudioVersion = 17.13.35931.197 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RobleysQuestingFramework", "JotunnModStub\RobleysQuestingFramework.csproj", "{DEAF4438-8089-40ED-8175-398E1261D45B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RobleysTestQuests", "RobleysTestQuests\RobleysTestQuests.csproj", "{A64C9ABC-0C6F-4B2F-A853-482D167CBF08}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{DEAF4438-8089-40ED-8175-398E1261D45B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DEAF4438-8089-40ED-8175-398E1261D45B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DEAF4438-8089-40ED-8175-398E1261D45B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A64C9ABC-0C6F-4B2F-A853-482D167CBF08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A64C9ABC-0C6F-4B2F-A853-482D167CBF08}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A64C9ABC-0C6F-4B2F-A853-482D167CBF08}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A64C9ABC-0C6F-4B2F-A853-482D167CBF08}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

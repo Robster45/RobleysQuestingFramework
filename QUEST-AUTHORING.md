@@ -1,6 +1,6 @@
 # Writing a quest
 
-Write a quest class, not a quest-specific service. `BoarRunestoneQuest.cs` is a complete NPC quest example: it contains its location trigger, spawn settings, dialogue, acceptance, resource requirements, attack/death cancellation, and taming reward. The shared services contain no boar quest IDs or item requirements.
+Write a quest class, not a quest-specific service. [`BoarRunestoneQuest.cs`](RobleysTestQuests/BoarRunestoneQuest.cs) is a complete NPC quest example: it contains its location trigger, spawn settings, dialogue, acceptance, resource requirements, attack/death cancellation, and taming reward. The shared services contain no boar quest IDs or item requirements.
 
 ## Registration
 
@@ -11,7 +11,7 @@ QuestManager.RegisterQuest("my.quest", (playerID, inventory) =>
     new MyQuest(playerID, inventory), discoverForEveryPlayer: true);
 ```
 
-The boar example groups its NPC definition registration and quest factory in `BoarRunestoneQuest.Register()`. That method is called once from plugin startup. Nothing needs a per-quest `Update` method or RPC handler.
+The boar example groups its NPC definition registration and quest factory in `BoarRunestoneQuest.Register()`. That method is called once from the optional `RobleysTestQuests` plugin startup. External quest plugins reference the framework project or DLL and declare a BepInEx dependency on `RobleysQuestingFramework.PluginGUID`; the framework does not register their content. Nothing needs a per-quest `Update` method or RPC handler.
 
 ## Stage-based subscriptions
 

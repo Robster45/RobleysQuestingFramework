@@ -32,8 +32,6 @@ namespace RobleysQuestingFramework
             // https://valheim-modding.github.io/Jotunn/tutorials/overview.html
 
             QuestJournal.Initialize(Config);
-            TestQuestBootstrap.Register();
-            BoarRunestoneQuest.Register();
             _harmony = new Harmony(PluginGUID);
             _harmony.PatchAll(typeof(QuestManager).Assembly);
         }
@@ -48,7 +46,6 @@ namespace RobleysQuestingFramework
         void OnDestroy()
         {
             QuestJournal.Destroy();
-            TestQuestBootstrap.Unregister();
             QuestManager.Unload();
             InventoryObservationService.Reset();
             KillObservationService.Reset();

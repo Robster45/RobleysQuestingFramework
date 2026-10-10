@@ -1,5 +1,7 @@
 # A boar's trust
 
+This quest is supplied by the optional `RobleysTestQuests` plugin. Install it alongside `RobleysQuestingFramework` on the server and clients.
+
 Approaching within 12 metres of a generated `Runestone_Boars` location spawns one friendly, untamed two-star boar beside the visitor. Each stone spawns its quest boar only once per saved world. This uses a world global key, so revisiting, reconnecting, and normal world reloads do not duplicate the encounter. Other runestone types do not trigger it.
 
 The quest becomes discovered at this encounter and awaits interaction to start. Only a hidden, eligible quest watches for new encounters; finished quests no longer spawn boars. Another player may accept an existing unclaimed boar first, in which case the original discoverer's quest is cancelled when its giver is claimed.

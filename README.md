@@ -1,7 +1,15 @@
 # JötunnModStub
 
 A Valheim mod stub project using [Jötunn](https://github.com/Valheim-Modding/Jotunn) including build tools and a basic Unity project stub.
-This project now includes a server-owned quest framework. Start with [Writing quests](QUEST-AUTHORING.md) for event subscriptions, NPC interactions, hand-ins, and persistence. [A boar's trust](BOAR-QUEST.md) describes the playable example and in-game checks.
+This project includes a server-owned quest framework. The optional `RobleysTestQuests` plugin contains all three playable test quests (wood, necks, and the boar); the framework alone registers no sample quests. Start with [Writing quests](QUEST-AUTHORING.md) for event subscriptions, NPC interactions, hand-ins, and persistence. [A boar's trust](BOAR-QUEST.md) describes the playable example and in-game checks.
+
+## Separate plugins
+
+The solution builds `RobleysQuestingFramework.dll` and `RobleysTestQuests.dll`. The test plugin references the framework; the framework has no dependency on the test plugin. Install both on the server and clients for quest testing. For framework-only work, remove `RobleysTestQuests` from `BepInEx/plugins` while the game is stopped. Replace the old framework DLL too, since older builds contain the sample quests.
+
+Build only the framework with `dotnet build JotunnModStub/RobleysQuestingFramework.csproj`, or build both with `dotnet build RobleysQuestingFramework.sln`. Debug builds deploy each DLL into its own plugin folder using `MOD_DEPLOYPATH`. Pass `-p:SkipPublish=true` to compile without deployment or packaging, and `-p:ExecutePrebuild=false` to reuse existing publicized game assemblies. Release packaging is per project; the test package requires a separately installed framework.
+
+Existing quest IDs and saves are preserved. Without the test plugin, its saved records remain inactive and are retained for reinstallation. Existing spawned boars are not removed. Restart the game to add or remove quest plugins.
 
 #  Setup Guide
 

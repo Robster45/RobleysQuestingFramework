@@ -1,14 +1,7 @@
-﻿# JotunnModStub
-Upon building for release, this README.md is copied into the `Package` folder for thunderstore packaging. Remember to also edit the manifest.json and supply your own mod icon.
+# RobleysQuestingFramework
 
-## Installation (manual)
+Server-owned quest framework for Valheim, with quest persistence, inventory and kill tracking, NPC interactions, hand-ins, and a quest journal.
 
+Requires BepInEx and Jotunn. Install the framework DLL under `BepInEx/plugins` on the server and clients.
 
-## Features
-
-
-## Changelog
-
-
-## Known issues
-You can find the github at:
+Playable examples are supplied separately by the optional `RobleysTestQuests` plugin. The framework alone registers no test quests. Install both plugins to test the wood, neck, and boar quests; remove the test plugin while the game is stopped for framework-only use.

@@ -129,6 +129,7 @@ namespace RobleysQuestingFramework
         public static void RegisterQuest(string id, Func<long, QuestInventory, Quest> factory)
             => RegisterQuest(id, factory, false);
 
+        // Automatic creation covers both currently available players and future arrivals.
         public static void RegisterQuest(string id, Func<long, QuestInventory, Quest> factory, bool discoverForEveryPlayer)
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -149,6 +150,12 @@ namespace RobleysQuestingFramework
             {
                 if (record.QuestID == id && !manager._active.ContainsKey(record))
                     manager.Activate(record);
+            }
+
+            if (discoverForEveryPlayer)
+            {
+                foreach (long playerID in InventoryObservationService.GetAvailablePlayerIDs())
+                    manager.GetOrAddQuest(playerID, id, out _);
             }
         }
 

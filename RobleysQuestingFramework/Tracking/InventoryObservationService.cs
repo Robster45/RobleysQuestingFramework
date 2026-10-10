@@ -27,6 +27,9 @@ namespace RobleysQuestingFramework
 
         public static event Action<long> PlayerAvailable;
 
+        // Snapshot of characters observed as connected by the server's latest tick.
+        public static long[] GetAvailablePlayerIDs() => Connections.Keys.ToArray();
+
         public static QuestInventory ForPlayer(long id)
         {
             if (!Sources.TryGetValue(id, out QuestInventory source))

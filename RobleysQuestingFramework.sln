@@ -1,9 +1,9 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35931.197 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RobleysQuestingFramework", "JotunnModStub\RobleysQuestingFramework.csproj", "{DEAF4438-8089-40ED-8175-398E1261D45B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RobleysQuestingFramework", "RobleysQuestingFramework\RobleysQuestingFramework.csproj", "{DEAF4438-8089-40ED-8175-398E1261D45B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RobleysTestQuests", "RobleysTestQuests\RobleysTestQuests.csproj", "{A64C9ABC-0C6F-4B2F-A853-482D167CBF08}"
 EndProject

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -46,7 +46,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../JotunnModStub/RobleysQuestingFramework.csproj" Private="false" />
+    <ProjectReference Include="../RobleysQuestingFramework/RobleysQuestingFramework.csproj" Private="false" />
     <PackageReference Include="JotunnLib" Version="2.27.1" />
   </ItemGroup>
 

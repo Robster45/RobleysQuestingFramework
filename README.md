@@ -1,13 +1,15 @@
-# JötunnModStub
+# RobleysQuestingFramework
 
-A Valheim mod stub project using [Jötunn](https://github.com/Valheim-Modding/Jotunn) including build tools and a basic Unity project stub.
+A Valheim quest framework using [Jötunn](https://github.com/Valheim-Modding/Jotunn), including build tools and a companion Unity project.
 This project includes a server-owned quest framework. The optional `RobleysTestQuests` plugin contains all three playable test quests (wood, necks, and the boar); the framework alone registers no sample quests. Start with [Writing quests](QUEST-AUTHORING.md) for event subscriptions, NPC interactions, hand-ins, and persistence. [A boar's trust](BOAR-QUEST.md) describes the playable example and in-game checks.
 
 ## Separate plugins
 
+For a guide to the framework's source directories, see [Source layout](RobleysQuestingFramework/README.md#source-layout).
+
 The solution builds `RobleysQuestingFramework.dll` and `RobleysTestQuests.dll`. The test plugin references the framework; the framework has no dependency on the test plugin. Install both on the server and clients for quest testing. For framework-only work, remove `RobleysTestQuests` from `BepInEx/plugins` while the game is stopped. Replace the old framework DLL too, since older builds contain the sample quests.
 
-Build only the framework with `dotnet build JotunnModStub/RobleysQuestingFramework.csproj`, or build both with `dotnet build RobleysQuestingFramework.sln`. Debug builds deploy each DLL into its own plugin folder using `MOD_DEPLOYPATH`. Pass `-p:SkipPublish=true` to compile without deployment or packaging, and `-p:ExecutePrebuild=false` to reuse existing publicized game assemblies. Release packaging is per project; the test package requires a separately installed framework.
+Build only the framework with `dotnet build RobleysQuestingFramework/RobleysQuestingFramework.csproj`, or build both with `dotnet build RobleysQuestingFramework.sln`. Debug builds deploy each DLL into its own plugin folder using `MOD_DEPLOYPATH`. Pass `-p:SkipPublish=true` to compile without deployment or packaging, and `-p:ExecutePrebuild=false` to reuse existing publicized game assemblies. Release packaging is per project; the test package requires a separately installed framework.
 
 Existing quest IDs and saves are preserved. Without the test plugin, its saved records remain inactive and are retained for reinstallation. Existing spawned boars are not removed. Restart the game to add or remove quest plugins.
 
@@ -27,22 +29,22 @@ The compiled dll and a dll.mdb debug file are copied to `<ValheimDir>\BepInEx\pl
 
 ### Building Release
 
-A compressed file with the binaries is created in `<JotunnModStub>\Packages`ready for upload to ThunderStore.
+A compressed file with the binaries is created in `<SolutionDir>\RobleysQuestingFramework\Packages`, ready for upload to ThunderStore.
 Dont forget to include your information in the manifest.json and to change the project's readme file.
 
 ## Developing Assets with Unity
 
 New Assets can be created with Unity and imported into Valheim using the mod.
-A Unity project is included in this repository under `<JotunnModStub>\JotunnModUnity`.
+A Unity project is included in this repository under `<SolutionDir>\RobleysQuestingFrameworkUnity`.
 
 ### Unity Editor Setup
 
 1. [Download](https://public-cdn.cloud.unity3d.com/hub/prod/UnityHubSetup.exe) UnityHub directly from Unity or install it with the Visual Studio Installer via `Individual Components` -> `Visual Studio Tools for Unity`
 2. You will need an Unity account to register your PC and get a free licence. Create the account, login with it in Unity Hub and get your licence via `Settings` -> `Licence Management`
 3. Install Unity Editor version 2022.3.17f
-4. Compile the project. This copies all assemblies into `<JotunnModStub>\JotunnModUnity\Assets\Assemblies`. Don't open Unity yet before this step, it will remove assembly references.
+4. Compile the project. This copies all assemblies into `<SolutionDir>\RobleysQuestingFrameworkUnity\Assets\Assemblies`. Don't open Unity yet before this step, it will remove assembly references.
 5. **Warning:** These assembly files are copyrighted material and you can theoretically get into trouble when you distribute them in your github repository. To avoid that there is a .gitignore file in the Unity project folder. Keep that when you clone or copy this repository
-6. Open Unity Hub and add the JotunnModUnity project
+6. Open Unity Hub and add the RobleysQuestingFrameworkUnity project
 7. Open the project in Unity
 8. Install the `AssetBundle Browser` package in the Unity Editor via `Window`-> `Package Manager` for easy bundle creation
 
@@ -61,7 +63,7 @@ If this is the case, the references to the assembly files must be renewed in Vis
 
 ### Unity actions
 
-1. Copy all `assembly_*.dll` from `<ValheimDir>\valheim_Data\Managed` into `<JotunnModStub>\JotunnModUnity\Assets\Assemblies`. <br />
+1. Copy all `assembly_*.dll` from `<ValheimDir>\valheim_Data\Managed` into `<SolutionDir>\RobleysQuestingFrameworkUnity\Assets\Assemblies`. <br />
   **Do this directly in the filesystem - don't import the dlls in Unity**.
 2. Go to Unity Editor and press `Ctrl+R`. This reloads all files from the filesystem and "re-imports" the copied dlls into the project.
 

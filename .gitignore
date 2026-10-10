@@ -94,7 +94,7 @@ x86/
 *.[Pp]ublish.xml
 
 # Unity project to avoid DMC Takedowns!
-**/JotunnModStubUnity/*
+**/RobleysQuestingFrameworkUnity/*
 
 # Local development paths
 Environment.props

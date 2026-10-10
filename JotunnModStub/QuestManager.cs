@@ -42,8 +42,36 @@ namespace RobleysQuestingFramework
         {
             foreach (Quest quest in _active.Values)
             {
-                if (quest.PlayerID == playerID && quest.Stage != QuestStage.Hidden)
+                if (quest.PlayerID == playerID && quest.Stage != QuestStage.Hidden && !quest.JournalDismissed)
                     yield return quest;
+            }
+        }
+
+        // Use world time on the server, including dedicated servers and sleep/time skips.
+        public void UpdateJournalDay()
+        {
+            if (ZNet.instance && ZNet.instance.IsServer() && EnvMan.instance)
+                AdvanceJournalDay(EnvMan.instance.GetDay());
+        }
+
+        public void AdvanceJournalDay(int day)
+        {
+            int? previousDay = _data.JournalDay;
+            if (previousDay == day)
+                return;
+            _data.JournalDay = day;
+            if (!previousDay.HasValue || day <= previousDay.Value)
+                return;
+
+            foreach (QuestRecord record in _data.Quests)
+            {
+                if (_active.TryGetValue(record, out Quest quest))
+                {
+                    quest.DismissFromJournal();
+                    record.JournalDismissed = quest.JournalDismissed;
+                }
+                else if (((QuestStage)record.Stage & QuestStage.Cancelled) != 0)
+                    record.JournalDismissed = true;
             }
         }
 
@@ -163,6 +191,7 @@ namespace RobleysQuestingFramework
             quest.QuestGiverId = new ZDOID(record.GiverUser, record.GiverID);
             quest.RestoreProgress(record.Progress);
             quest.RestoreStage((QuestStage)record.Stage);
+            quest.RestoreJournalDismissed(record.JournalDismissed);
             _active.Add(record, quest);
 
             try
@@ -198,6 +227,7 @@ namespace RobleysQuestingFramework
                 Directory.CreateDirectory(DataLoadPath);
                 foreach (KeyValuePair<QuestRecord, Quest> entry in _active)
                 {
+                    entry.Key.JournalDismissed = entry.Value.JournalDismissed;
                     entry.Key.Stage = (int)entry.Value.Stage;
                     entry.Key.Progress = entry.Value.SaveProgress();
                     entry.Key.GiverUser = entry.Value.QuestGiverId.UserID;
@@ -207,14 +237,14 @@ namespace RobleysQuestingFramework
                 string json = JsonConvert.SerializeObject(_data, Formatting.Indented);
                 // Never replace the previous save if the serializer omits player records.
                 SaveData check = JsonConvert.DeserializeObject<SaveData>(json);
-                if (check == null || check.Quests == null || check.Quests.Count != _data.Quests.Count)
+                if (check == null || check.Quests == null || check.Quests.Count != _data.Quests.Count || check.JournalDay != _data.JournalDay)
                     throw new InvalidDataException("Quest serialization omitted player records.");
                 for (int i = 0; i < _data.Quests.Count; i++)
                 {
                     QuestRecord expected = _data.Quests[i];
                     QuestRecord actual = check.Quests[i];
                     if (actual == null || actual.PlayerID != expected.PlayerID || actual.QuestID != expected.QuestID ||
-                        actual.InstanceKey != expected.InstanceKey || actual.Stage != expected.Stage || actual.Progress != expected.Progress ||
+                        actual.JournalDismissed != expected.JournalDismissed || actual.InstanceKey != expected.InstanceKey || actual.Stage != expected.Stage || actual.Progress != expected.Progress ||
                         actual.GiverUser != expected.GiverUser || actual.GiverID != expected.GiverID)
                         throw new InvalidDataException("Quest serialization changed player progress.");
                 }
@@ -240,6 +270,7 @@ namespace RobleysQuestingFramework
             public string PlayerID;
             public string QuestID;
             public string InstanceKey;
+            public bool JournalDismissed;
             public int Stage;
             public int Progress;
             public long GiverUser;
@@ -250,6 +281,7 @@ namespace RobleysQuestingFramework
         class SaveData
         {
             public int Version = 1;
+            public int? JournalDay;
             public string WorldID;
             public List<QuestRecord> Quests = new List<QuestRecord>();
         }

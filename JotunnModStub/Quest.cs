@@ -19,6 +19,18 @@ namespace RobleysQuestingFramework
     {
         public string InstanceKey { get; internal set; } = "";
 
+        public bool JournalDismissed { get; private set; }
+
+        public void RestoreJournalDismissed(bool dismissed) => JournalDismissed = dismissed;
+
+        public void DismissFromJournal()
+        {
+            if (JournalDismissed || !Has(Stage, QuestStage.Cancelled))
+                return;
+            JournalDismissed = true;
+            NotifyTrackingChanged();
+        }
+
         public string Name = "Unnamed quest";
 
         // Presentation only; quest authors can override this for custom objectives.
@@ -153,6 +165,7 @@ namespace RobleysQuestingFramework
             if (IsFinished)
                 return;
 
+            QuestManager.WorldInstance?.UpdateJournalDay();
             Jotunn.Logger.LogInfo($"Cancelling Quest: {Name}");
             SetStage((Stage & ~(QuestStage.Started | QuestStage.CriteriaMet | QuestStage.Completed)) | QuestStage.Cancelled);
         }

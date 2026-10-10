@@ -80,7 +80,9 @@ The `[Journal]` section in `BepInEx/config/com.jotunn.robleysquestingframework.c
 | OffsetY | 0 | Positive moves up, negative down |
 | FontSize | 16 | Text size |
 | BackgroundOpacity | 0.8 | Background alpha, from 0 to 1 |
-| ShowCancelledQuests | true | Include cancelled entries; completed quests are always removed |
+| ShowCancelledQuests | true | Include cancelled entries until the next in-game day; completed quests are always removed |
+
+Cancelled quests disappear when the server's in-game day counter advances, including after sleep or skipped days. This journal dismissal persists across saves and reconnects; the quest remains cancelled and cannot be restarted by clearing the journal. Older saves begin tracking the day when loaded, clearing existing cancelled entries at the next day change.
 
 The height grows with the entries. For a compact active tracker, disable `ShowCancelledQuests`. Completed quests disappear automatically when the visible journal next refreshes, or when it is reopened. A very large quest list can extend off-screen; this initial HUD does not have scrolling. Config changes made through a config manager apply while running; restart after editing the config file manually.
 

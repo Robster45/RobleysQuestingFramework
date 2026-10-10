@@ -37,7 +37,7 @@ namespace RobleysQuestingFramework
             OffsetY = config.Bind("Journal", "OffsetY", 0f, "Vertical offset; positive moves up.");
             FontSize = config.Bind("Journal", "FontSize", 16, new ConfigDescription("Journal text size.", new AcceptableValueRange<int>(10, 32)));
             Opacity = config.Bind("Journal", "BackgroundOpacity", 0.8f, new ConfigDescription("Panel opacity.", new AcceptableValueRange<float>(0, 1)));
-            ShowCancelled = config.Bind("Journal", "ShowCancelledQuests", true, "Include cancelled quests. Completed quests are always removed from the journal.");
+            ShowCancelled = config.Bind("Journal", "ShowCancelledQuests", true, "Include cancelled quests until the next in-game day. Completed quests are always removed from the journal.");
             config.SettingChanged += SettingsChanged;
             Quest.TrackingChanged += QuestChanged;
             GUIManager.OnCustomGUIAvailable += Recreate;
@@ -106,6 +106,7 @@ namespace RobleysQuestingFramework
 
             if (ZNet.instance && ZNet.instance.IsServer() && QuestManager.WorldInstance != null)
             {
+                QuestManager.WorldInstance.UpdateJournalDay();
                 foreach (KeyValuePair<long, long> viewer in Viewers.ToArray())
                 {
                     long playerID = ResolvePlayer(viewer.Key);

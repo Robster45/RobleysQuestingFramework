@@ -17,6 +17,8 @@ namespace RobleysQuestingFramework
     [Serializable]
     public abstract class Quest
     {
+        public string InstanceKey { get; internal set; } = "";
+
         public string Name = "Unnamed quest";
 
         // Presentation only; quest authors can override this for custom objectives.

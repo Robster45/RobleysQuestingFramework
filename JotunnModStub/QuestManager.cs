@@ -62,7 +62,7 @@ namespace RobleysQuestingFramework
             {
                 if (record == null || !long.TryParse(record.PlayerID, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsedPlayerID) || parsedPlayerID == 0 ||
                     string.IsNullOrEmpty(record.QuestID) || record.Stage < 0 || (record.Stage & ~31) != 0 ||
-                    !keys.Add(parsedPlayerID.ToString(CultureInfo.InvariantCulture) + ":" + record.QuestID))
+                    !keys.Add(parsedPlayerID.ToString(CultureInfo.InvariantCulture) + ":" + record.QuestID + ":" + (record.InstanceKey ?? "")))
                     throw new InvalidDataException("Invalid quest record in " + _savePath);
                 record.PlayerID = parsedPlayerID.ToString(CultureInfo.InvariantCulture);
             }
@@ -113,19 +113,23 @@ namespace RobleysQuestingFramework
         }
 
         public Quest GetOrAddQuest(long playerID, string questID, out bool created)
+            => GetOrAddQuest(playerID, questID, "", out created);
+
+        public Quest GetOrAddQuest(long playerID, string questID, string instanceKey, out bool created)
         {
+            instanceKey = instanceKey ?? "";
             if (playerID == 0)
                 throw new ArgumentException("A quest needs a valid character ID.", nameof(playerID));
 
             string id = playerID.ToString(CultureInfo.InvariantCulture);
-            QuestRecord record = _data.Quests.Find(q => q.PlayerID == id && q.QuestID == questID);
+            QuestRecord record = _data.Quests.Find(q => q.PlayerID == id && q.QuestID == questID && (q.InstanceKey ?? "") == instanceKey);
             created = record == null;
             if (created)
             {
                 if (!Factories.ContainsKey(questID))
                     throw new ArgumentException("Unknown quest: " + questID);
 
-                record = new QuestRecord { PlayerID = id, QuestID = questID };
+                record = new QuestRecord { PlayerID = id, QuestID = questID, InstanceKey = instanceKey };
                 _data.Quests.Add(record);
             }
 
@@ -155,6 +159,7 @@ namespace RobleysQuestingFramework
         {
             long playerID = long.Parse(record.PlayerID, CultureInfo.InvariantCulture);
             Quest quest = Factories[record.QuestID](playerID, InventoryObservationService.ForPlayer(playerID));
+            quest.InstanceKey = record.InstanceKey ?? "";
             quest.QuestGiverId = new ZDOID(record.GiverUser, record.GiverID);
             quest.RestoreProgress(record.Progress);
             quest.RestoreStage((QuestStage)record.Stage);
@@ -209,7 +214,7 @@ namespace RobleysQuestingFramework
                     QuestRecord expected = _data.Quests[i];
                     QuestRecord actual = check.Quests[i];
                     if (actual == null || actual.PlayerID != expected.PlayerID || actual.QuestID != expected.QuestID ||
-                        actual.Stage != expected.Stage || actual.Progress != expected.Progress ||
+                        actual.InstanceKey != expected.InstanceKey || actual.Stage != expected.Stage || actual.Progress != expected.Progress ||
                         actual.GiverUser != expected.GiverUser || actual.GiverID != expected.GiverID)
                         throw new InvalidDataException("Quest serialization changed player progress.");
                 }
@@ -234,6 +239,7 @@ namespace RobleysQuestingFramework
         {
             public string PlayerID;
             public string QuestID;
+            public string InstanceKey;
             public int Stage;
             public int Progress;
             public long GiverUser;
